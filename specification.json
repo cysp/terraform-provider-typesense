@@ -1,0 +1,24 @@
+{
+    "version": "0.1",
+    "provider": {
+        "name": "typesense",
+        "schema": {
+            "attributes": [
+                {
+                    "name": "url",
+                    "string": {
+                        "optional_required": "optional"
+                    }
+                },
+                {
+                    "name": "api_key",
+                    "string": {
+                        "optional_required": "optional"
+                    }
+                }
+            ]
+        }
+    },
+    "resources": [],
+    "datasources": []
+}

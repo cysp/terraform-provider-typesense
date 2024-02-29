@@ -1,0 +1,79 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.1.4
+      - uses: actions/setup-go@v5.0.1
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - run: go mod download
+      - run: go build -v .
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4.1.4
+      - uses: actions/setup-go@v5.0.1
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - run: go mod download
+      - run: go test -v -cover ./...
+        timeout-minutes: 10
+
+  testacc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+          - "1.7.*"
+          - "1.8.*"
+    services:
+      typesense:
+        image: typesense/typesense:26.0
+        ports:
+          - "8108"
+        env:
+          TYPESENSE_API_KEY: "12345"
+          TYPESENSE_DATA_DIR: "/data"
+        volumes:
+          - /data
+    steps:
+      - uses: actions/checkout@v4.1.4
+      - uses: actions/setup-go@v5.0.1
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - uses: hashicorp/setup-terraform@v3.1.1
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - run: go mod download
+      - env:
+          TF_ACC: "1"
+          TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports[8108] }}"
+          TYPESENSE_API_KEY: "12345"
+        run: go test -v -cover ./internal/provider/
+        timeout-minutes: 10
