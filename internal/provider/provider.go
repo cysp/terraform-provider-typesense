@@ -87,5 +87,7 @@ func (p *TypesenseProvider) DataSources(_ context.Context) []func() datasource.D
 }
 
 func (p *TypesenseProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewKeyResource,
+	}
 }
