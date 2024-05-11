@@ -83,7 +83,9 @@ func (p *TypesenseProvider) Metadata(_ context.Context, _ provider.MetadataReque
 }
 
 func (p *TypesenseProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewKeyDataSource,
+	}
 }
 
 func (p *TypesenseProvider) Resources(_ context.Context) []func() resource.Resource {
