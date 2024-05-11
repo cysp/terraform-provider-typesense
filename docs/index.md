@@ -23,5 +23,5 @@ provider "typesense" {
 
 ### Optional
 
-- `api_key` (String)
-- `url` (String)
+- `api_key` (String) Typesense API Admin Key
+- `url` (String) Typesense API URL

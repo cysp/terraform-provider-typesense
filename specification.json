@@ -7,12 +7,14 @@
                 {
                     "name": "url",
                     "string": {
+                        "description": "Typesense API URL",
                         "optional_required": "optional"
                     }
                 },
                 {
                     "name": "api_key",
                     "string": {
+                        "description": "Typesense API Admin Key",
                         "optional_required": "optional"
                     }
                 }
@@ -115,7 +117,8 @@
                             "computed_optional_required": "computed"
                         }
                     }
-                ]
+                ],
+                "description": "Typesense Key"
             }
         }
     ],
@@ -167,7 +170,8 @@
                             "computed_optional_required": "computed"
                         }
                     }
-                ]
+                ],
+                "description": "Typesense Key"
             }
         }
     ]

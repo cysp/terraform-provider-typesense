@@ -13,10 +13,14 @@ func TypesenseProviderSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"api_key": schema.StringAttribute{
-				Optional: true,
+				Optional:            true,
+				Description:         "Typesense API Admin Key",
+				MarkdownDescription: "Typesense API Admin Key",
 			},
 			"url": schema.StringAttribute{
-				Optional: true,
+				Optional:            true,
+				Description:         "Typesense API URL",
+				MarkdownDescription: "Typesense API URL",
 			},
 		},
 	}

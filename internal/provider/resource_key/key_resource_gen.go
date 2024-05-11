@@ -50,6 +50,7 @@ func KeyResourceSchema(ctx context.Context) schema.Schema {
 				Computed: true,
 			},
 		},
+		Description: "Typesense Key",
 	}
 }
 

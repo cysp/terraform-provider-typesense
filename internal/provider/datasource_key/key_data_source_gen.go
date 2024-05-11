@@ -35,6 +35,7 @@ func KeyDataSourceSchema(ctx context.Context) schema.Schema {
 				Computed: true,
 			},
 		},
+		Description: "Typesense Key",
 	}
 }
 
