@@ -8,6 +8,8 @@ description: |-
 
 # typesense Provider
 
+
+
 ## Example Usage
 
 ```terraform

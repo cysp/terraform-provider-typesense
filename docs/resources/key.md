@@ -3,10 +3,12 @@
 page_title: "typesense_key Resource - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  
+  Typesense Key
 ---
 
 # typesense_key (Resource)
+
+Typesense Key
 
 ## Example Usage
 

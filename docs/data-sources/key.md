@@ -3,10 +3,12 @@
 page_title: "typesense_key Data Source - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  
+  Typesense Key
 ---
 
 # typesense_key (Data Source)
+
+Typesense Key
 
 ## Example Usage
 

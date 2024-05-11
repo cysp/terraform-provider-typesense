@@ -135,7 +135,8 @@
                             "computed_optional_required": "computed"
                         }
                     }
-                ]
+                ],
+                "description": "Typesense Key"
             }
         }
     ],
@@ -193,7 +194,8 @@
                             "computed_optional_required": "computed"
                         }
                     }
-                ]
+                ],
+                "description": "Typesense Key"
             }
         }
     ]
