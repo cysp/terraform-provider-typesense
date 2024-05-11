@@ -119,5 +119,56 @@
             }
         }
     ],
-    "datasources": []
+    "datasources": [
+        {
+            "name": "key",
+            "schema": {
+                "attributes": [
+                    {
+                        "name": "id",
+                        "int64": {
+                            "computed_optional_required": "required"
+                        }
+                    },
+                    {
+                        "name": "actions",
+                        "list": {
+                            "computed_optional_required": "computed",
+                            "element_type": {
+                                "string": {}
+                            }
+                        }
+                    },
+                    {
+                        "name": "collections",
+                        "list": {
+                            "computed_optional_required": "computed",
+                            "element_type": {
+                                "string": {}
+                            }
+                        }
+                    },
+                    {
+                        "name": "description",
+                        "string": {
+                            "computed_optional_required": "computed"
+                        }
+                    },
+                    {
+                        "name": "value",
+                        "string": {
+                            "computed_optional_required": "computed_optional",
+                            "sensitive": true
+                        }
+                    },
+                    {
+                        "name": "value_prefix",
+                        "string": {
+                            "computed_optional_required": "computed"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
 }
