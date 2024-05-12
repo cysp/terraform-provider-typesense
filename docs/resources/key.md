@@ -8,8 +8,6 @@ description: |-
 
 # typesense_key (Resource)
 
-
-
 ## Example Usage
 
 ```terraform

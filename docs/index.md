@@ -8,8 +8,6 @@ description: |-
 
 # typesense Provider
 
-
-
 ## Example Usage
 
 ```terraform
@@ -25,3 +23,4 @@ provider "typesense" {
 
 - `api_key` (String)
 - `url` (String)
+
