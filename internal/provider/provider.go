@@ -6,13 +6,17 @@ import (
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/typesense/typesense-go/typesense"
 )
 
-var _ provider.Provider = (*TypesenseProvider)(nil)
+var (
+	_ provider.Provider              = (*TypesenseProvider)(nil)
+	_ provider.ProviderWithFunctions = (*TypesenseProvider)(nil)
+)
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
@@ -90,5 +94,11 @@ func (p *TypesenseProvider) DataSources(_ context.Context) []func() datasource.D
 func (p *TypesenseProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewKeyResource,
+	}
+}
+
+func (p *TypesenseProvider) Functions(context.Context) []func() function.Function {
+	return []func() function.Function{
+		NewGenerateScopedSearchKeyFunction,
 	}
 }
