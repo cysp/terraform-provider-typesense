@@ -18,6 +18,8 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_a
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
 	model.Description = types.StringValue(apiKey.Description)
 
+	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
+
 	if apiKey.Value != nil {
 		model.Value = types.StringPointerValue(apiKey.Value)
 		model.ValuePrefix = types.StringValue((*apiKey.Value)[:4])

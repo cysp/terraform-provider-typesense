@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/datasource_key"
+	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
@@ -16,9 +17,10 @@ func TestReadFromResponse(t *testing.T) {
 	t.Parallel()
 
 	var (
-		zero   int64  = 0
-		value  string = "value"
-		prefix string = "prefix"
+		zero               int64  = 0
+		value              string = "value"
+		prefix             string = "prefix"
+		farFutureTimestamp int64  = util.FarFutureTimestamp
 	)
 
 	tests := map[string]struct {
@@ -85,6 +87,28 @@ func TestReadFromResponse(t *testing.T) {
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
 				Description: types.StringValue("description"),
+			},
+		},
+		"expires at": {
+			apiKey: typesense_api.ApiKey{
+				ExpiresAt: &zero,
+			},
+			expected: datasource_key.KeyModel{
+				Actions:     types.ListNull(types.StringType),
+				Collections: types.ListNull(types.StringType),
+				Description: types.StringValue(""),
+				ExpiresAt:   types.Int64Value(0),
+			},
+		},
+		"expires at: far future": {
+			apiKey: typesense_api.ApiKey{
+				ExpiresAt: &farFutureTimestamp,
+			},
+			expected: datasource_key.KeyModel{
+				Actions:     types.ListNull(types.StringType),
+				Collections: types.ListNull(types.StringType),
+				Description: types.StringValue(""),
+				ExpiresAt:   types.Int64Value(farFutureTimestamp),
 			},
 		},
 		"value": {

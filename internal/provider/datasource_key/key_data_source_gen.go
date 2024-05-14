@@ -23,6 +23,10 @@ func KeyDataSourceSchema(ctx context.Context) schema.Schema {
 			"description": schema.StringAttribute{
 				Computed: true,
 			},
+			"expires_at": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+			},
 			"id": schema.Int64Attribute{
 				Required: true,
 			},
@@ -42,6 +46,7 @@ type KeyModel struct {
 	Actions     types.List   `tfsdk:"actions"`
 	Collections types.List   `tfsdk:"collections"`
 	Description types.String `tfsdk:"description"`
+	ExpiresAt   types.Int64  `tfsdk:"expires_at"`
 	Id          types.Int64  `tfsdk:"id"`
 	Value       types.String `tfsdk:"value"`
 	ValuePrefix types.String `tfsdk:"value_prefix"`

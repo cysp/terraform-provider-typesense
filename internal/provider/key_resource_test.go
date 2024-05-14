@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 func TestAccKeyResource(t *testing.T) {
@@ -33,6 +34,42 @@ func TestAccKeyResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("typesense_key.test", "id"),
 					resource.TestMatchResourceAttr("typesense_key.test", "value", regexp.MustCompile("^.+$")),
 					resource.TestMatchResourceAttr("typesense_key.test", "value_prefix", regexp.MustCompile("^.{4}$")),
+				),
+			},
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+					expires_at = 64723363199
+				}
+				`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("typesense_key.test", plancheck.ResourceActionNoop),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("typesense_key.test", "expires_at", "64723363199"),
+				),
+			},
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+					expires_at = 0
+				}
+				`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("typesense_key.test", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("typesense_key.test", "expires_at", "0"),
 				),
 			},
 			{

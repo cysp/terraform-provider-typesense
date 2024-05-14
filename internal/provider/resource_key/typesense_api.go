@@ -20,6 +20,10 @@ func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKey
 	diags.Append(model.Collections.ElementsAs(ctx, &apiKeySchema.Collections, false)...)
 	apiKeySchema.Description = model.Description.ValueString()
 
+	if !model.ExpiresAt.IsUnknown() {
+		apiKeySchema.ExpiresAt = model.ExpiresAt.ValueInt64Pointer()
+	}
+
 	if !model.Value.IsUnknown() {
 		apiKeySchema.Value = model.Value.ValueStringPointer()
 	}
@@ -34,6 +38,8 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_a
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
 	model.Description = types.StringValue(apiKey.Description)
+
+	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
 
 	if apiKey.Value != nil {
 		model.Value = types.StringPointerValue(apiKey.Value)
