@@ -4,6 +4,7 @@ package resource_key
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -35,6 +36,13 @@ func KeyResourceSchema(ctx context.Context) schema.Schema {
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"expires_at": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.RequiresReplace(),
+				},
+			},
 			"id": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -57,6 +65,7 @@ type KeyModel struct {
 	Actions     types.List   `tfsdk:"actions"`
 	Collections types.List   `tfsdk:"collections"`
 	Description types.String `tfsdk:"description"`
+	ExpiresAt   types.Int64  `tfsdk:"expires_at"`
 	Id          types.Int64  `tfsdk:"id"`
 	Value       types.String `tfsdk:"value"`
 	ValuePrefix types.String `tfsdk:"value_prefix"`

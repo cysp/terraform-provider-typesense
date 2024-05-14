@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/resource_key"
+	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,10 @@ import (
 func TestKeyModelToAPIKeySchema(t *testing.T) {
 	t.Parallel()
 
-	var value string = "value"
+	var (
+		zero  int64  = 0
+		value string = "value"
+	)
 
 	tests := map[string]struct {
 		model    resource_key.KeyModel
@@ -92,6 +96,40 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Description: "description",
 			},
 		},
+		"expires at: unknown": {
+			model: resource_key.KeyModel{
+				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
+				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
+				ExpiresAt:   types.Int64Unknown(),
+			},
+			expected: typesense_api.ApiKeySchema{
+				Actions:     []string{},
+				Collections: []string{},
+			},
+		},
+		"expires at: null": {
+			model: resource_key.KeyModel{
+				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
+				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
+				ExpiresAt:   types.Int64Null(),
+			},
+			expected: typesense_api.ApiKeySchema{
+				Actions:     []string{},
+				Collections: []string{},
+			},
+		},
+		"expires at: known": {
+			model: resource_key.KeyModel{
+				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
+				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
+				ExpiresAt:   types.Int64Value(0),
+			},
+			expected: typesense_api.ApiKeySchema{
+				Actions:     []string{},
+				Collections: []string{},
+				ExpiresAt:   &zero,
+			},
+		},
 		"value: unknown": {
 			model: resource_key.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
@@ -144,9 +182,10 @@ func TestReadFromResponse(t *testing.T) {
 	t.Parallel()
 
 	var (
-		zero   int64  = 0
-		value  string = "value"
-		prefix string = "prefix"
+		zero               int64  = 0
+		value              string = "value"
+		prefix             string = "prefix"
+		farFutureTimestamp int64  = util.FarFutureTimestamp
 	)
 
 	tests := map[string]struct {
@@ -213,6 +252,28 @@ func TestReadFromResponse(t *testing.T) {
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
 				Description: types.StringValue("description"),
+			},
+		},
+		"expires at": {
+			apiKey: typesense_api.ApiKey{
+				ExpiresAt: &zero,
+			},
+			expected: resource_key.KeyModel{
+				Actions:     types.ListNull(types.StringType),
+				Collections: types.ListNull(types.StringType),
+				Description: types.StringValue(""),
+				ExpiresAt:   types.Int64Value(0),
+			},
+		},
+		"expires at: far future": {
+			apiKey: typesense_api.ApiKey{
+				ExpiresAt: &farFutureTimestamp,
+			},
+			expected: resource_key.KeyModel{
+				Actions:     types.ListNull(types.StringType),
+				Collections: types.ListNull(types.StringType),
+				Description: types.StringValue(""),
+				ExpiresAt:   types.Int64Value(farFutureTimestamp),
 			},
 		},
 		"value": {

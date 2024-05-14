@@ -29,6 +29,7 @@ resource "typesense_key" "this" {
 
 ### Optional
 
+- `expires_at` (Number)
 - `value` (String, Sensitive)
 
 ### Read-Only
