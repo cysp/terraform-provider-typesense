@@ -35,6 +35,23 @@ func TestAccKeyResource(t *testing.T) {
 					resource.TestMatchResourceAttr("typesense_key.test", "value_prefix", regexp.MustCompile("^.{4}$")),
 				),
 			},
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = "testacc key"
+				}
+
+				resource "typesense_key" "test_clone" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = "testacc key clone"
+					value = typesense_key.test.value
+				}
+				`,
+				ExpectError: regexp.MustCompile("Error creating key"),
+			},
 		},
 	})
 }
