@@ -11,7 +11,7 @@ description: |-
 ## Example Usage
 
 ```terraform
-resource "typesense_key" "this" {
+data "typesense_key" "this" {
   id = 123
 }
 ```

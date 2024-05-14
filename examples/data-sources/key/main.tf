@@ -1,3 +1,3 @@
-resource "typesense_key" "this" {
+data "typesense_key" "this" {
   id = 123
 }
