@@ -43,6 +43,7 @@ jobs:
       - uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: test
 
   testacc:
     runs-on: ubuntu-latest
@@ -83,3 +84,4 @@ jobs:
       - uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: testacc-${{ matrix.terraform }}
