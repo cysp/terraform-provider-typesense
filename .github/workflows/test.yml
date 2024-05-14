@@ -38,8 +38,11 @@ jobs:
           go-version-file: "go.mod"
           cache: true
       - run: go mod download
-      - run: go test -v -cover ./...
+      - run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
         timeout-minutes: 10
+      - uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   testacc:
     runs-on: ubuntu-latest
@@ -75,5 +78,8 @@ jobs:
           TF_ACC: "1"
           TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports[8108] }}"
           TYPESENSE_API_KEY: "12345"
-        run: go test -v -cover ./internal/provider/
+        run: go test -v -coverprofile=coverage.txt -covermode=atomic ./internal/provider/
         timeout-minutes: 10
+      - uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
