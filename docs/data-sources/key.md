@@ -8,6 +8,8 @@ description: |-
 
 # typesense_key (Data Source)
 
+
+
 ## Example Usage
 
 ```terraform
@@ -31,4 +33,5 @@ data "typesense_key" "this" {
 - `description` (String)
 - `id` (Number) The ID of this resource.
 - `value_prefix` (String)
+
 
