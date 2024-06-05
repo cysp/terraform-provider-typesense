@@ -1,3 +1,5 @@
+version: 2
+
 builds:
 - env:
     - CGO_ENABLED=0
@@ -45,4 +47,4 @@ release:
       name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   # draft: true
 changelog:
-  skip: true
+  disable: true
