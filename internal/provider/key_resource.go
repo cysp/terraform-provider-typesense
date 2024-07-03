@@ -2,11 +2,14 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/resource_key"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/typesense/typesense-go/typesense"
 )
 
 var (
@@ -80,6 +83,16 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	retrievedAPIKey, err := r.providerData.client.Key(keyID).Retrieve(ctx)
 	if err != nil {
+		var httpError *typesense.HTTPError
+		if errors.As(err, &httpError) {
+			if httpError.Status == http.StatusNotFound {
+				resp.Diagnostics.AddWarning("Key not found", "")
+				resp.State.RemoveResource(ctx)
+
+				return
+			}
+		}
+
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
@@ -113,6 +126,15 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	deletedAPIKey, err := r.providerData.client.Key(data.Id.ValueInt64()).Delete(ctx)
 	if err != nil {
+		var httpError *typesense.HTTPError
+		if errors.As(err, &httpError) {
+			if httpError.Status == http.StatusNotFound {
+				resp.Diagnostics.AddWarning("Key not found", "")
+
+				return
+			}
+		}
+
 		resp.Diagnostics.AddError("Error deleting key", err.Error())
 
 		return
