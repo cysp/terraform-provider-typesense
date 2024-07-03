@@ -120,3 +120,57 @@ func TestAccKeyResourceImport(t *testing.T) {
 		},
 	})
 }
+
+func TestAccKeyResourceDeleted(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+				}
+				`,
+			},
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+				}
+
+				import {
+					id = typesense_key.test.id
+					to = typesense_key.test_dup
+				}
+
+				resource "typesense_key" "test_dup" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+				}
+				`,
+			},
+			{
+				Config: `
+				resource "typesense_key" "test" {
+					actions = ["search:*"]
+					collections = ["*"]
+					description = ""
+				}
+				`,
+				ExpectNonEmptyPlan: true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("typesense_key.test", plancheck.ResourceActionCreate),
+					},
+				},
+			},
+		},
+	})
+}
