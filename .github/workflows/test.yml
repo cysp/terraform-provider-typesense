@@ -40,7 +40,7 @@ jobs:
       - run: go mod download
       - run: go test -v -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
         timeout-minutes: 10
-      - uses: codecov/codecov-action@v4.6.0
+      - uses: codecov/codecov-action@v5.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: test
@@ -81,7 +81,7 @@ jobs:
           TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports[8108] }}"
           TYPESENSE_API_KEY: "12345"
         timeout-minutes: 10
-      - uses: codecov/codecov-action@v4.6.0
+      - uses: codecov/codecov-action@v5.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: testacc-${{ matrix.terraform }}
