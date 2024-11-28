@@ -1,8 +1,8 @@
 module github.com/cysp/terraform-provider-typesense
 
-go 1.22.1
+go 1.22.7
 
-toolchain go1.22.9
+toolchain go1.23.3
 
 require (
 	github.com/hashicorp/terraform-plugin-codegen-framework v0.4.0
