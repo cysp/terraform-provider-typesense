@@ -8,8 +8,7 @@ linters:
   enable-all: true
   disable:
     - depguard
-    - execinquery
     - exhaustruct
     - funlen
-    - gomnd
     - lll
+    - tenv
