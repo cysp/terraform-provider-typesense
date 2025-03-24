@@ -2,7 +2,6 @@
 package resource_key_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/resource_key"
@@ -170,7 +169,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			apiKeySchema, diags := test.model.ToAPIKeySchema(context.Background())
+			apiKeySchema, diags := test.model.ToAPIKeySchema(t.Context())
 
 			assert.Empty(t, diags)
 			assert.EqualValues(t, test.expected, apiKeySchema)
@@ -310,7 +309,7 @@ func TestReadFromResponse(t *testing.T) {
 			model := resource_key.KeyModel{}
 
 			apiKey := test.apiKey
-			diags := model.ReadFromResponse(context.Background(), &apiKey)
+			diags := model.ReadFromResponse(t.Context(), &apiKey)
 
 			assert.Empty(t, diags)
 			assert.Equal(t, test.expected, model)

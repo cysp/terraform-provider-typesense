@@ -2,7 +2,6 @@
 package datasource_key_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/datasource_key"
@@ -145,7 +144,7 @@ func TestReadFromResponse(t *testing.T) {
 			model := datasource_key.KeyModel{}
 
 			apiKey := test.apiKey
-			diags := model.ReadFromResponse(context.Background(), &apiKey)
+			diags := model.ReadFromResponse(t.Context(), &apiKey)
 
 			assert.Empty(t, diags)
 			assert.Equal(t, test.expected, model)
