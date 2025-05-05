@@ -16,8 +16,8 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 	t.Parallel()
 
 	var (
-		zero  int64  = 0
-		value string = "value"
+		zero  int64 = 0
+		value       = "value"
 	)
 
 	tests := map[string]struct {
@@ -172,7 +172,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 			apiKeySchema, diags := test.model.ToAPIKeySchema(t.Context())
 
 			assert.Empty(t, diags)
-			assert.EqualValues(t, test.expected, apiKeySchema)
+			assert.Equal(t, test.expected, apiKeySchema)
 		})
 	}
 }
@@ -181,10 +181,10 @@ func TestReadFromResponse(t *testing.T) {
 	t.Parallel()
 
 	var (
-		zero               int64  = 0
-		value              string = "value"
-		prefix             string = "prefix"
-		farFutureTimestamp int64  = util.FarFutureTimestamp
+		zero               int64 = 0
+		value                    = "value"
+		prefix                   = "prefix"
+		farFutureTimestamp       = util.FarFutureTimestamp
 	)
 
 	tests := map[string]struct {

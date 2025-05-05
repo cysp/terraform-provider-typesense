@@ -41,7 +41,7 @@ func TestProviderDataFromDataSourceConfigureRequest(t *testing.T) {
 				ProviderData: test.providerData,
 			}, &providerData, &resp)
 
-			assert.EqualValues(t, test.expectedSuccess, result)
+			assert.Equal(t, test.expectedSuccess, result)
 
 			if test.expectedSuccess {
 				assert.Empty(t, resp.Diagnostics.Errors())
@@ -82,7 +82,7 @@ func TestProviderDataFromResourceeConfigureRequest(t *testing.T) {
 				ProviderData: test.providerData,
 			}, &providerData, &resp)
 
-			assert.EqualValues(t, test.expectedSuccess, result)
+			assert.Equal(t, test.expectedSuccess, result)
 
 			if test.expectedSuccess {
 				assert.EqualValues(t, test.providerData, providerData)
