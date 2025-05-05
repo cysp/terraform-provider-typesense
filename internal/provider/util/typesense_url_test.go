@@ -69,8 +69,8 @@ func TestTypesenseUrlFromEnv(t *testing.T) {
 
 			actualURL, actualFound := util.TypesenseURLFromEnv()
 
-			assert.EqualValues(t, test.expectedURL, actualURL)
-			assert.EqualValues(t, test.expectedURL != "", actualFound)
+			assert.Equal(t, test.expectedURL, actualURL)
+			assert.Equal(t, test.expectedURL != "", actualFound)
 		})
 	}
 }
