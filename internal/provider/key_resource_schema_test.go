@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKeyDataSourceSchema(t *testing.T) {
+func TestKeyResourceSchema(t *testing.T) {
 	t.Parallel()
 
-	schema := provider.KeyDataSourceSchema(t.Context())
+	schema := (&provider.KeyModel{}).ResourceSchema(t.Context())
 	assert.NotNil(t, schema)
 
 	assert.EqualValues(t, 0, schema.GetVersion())

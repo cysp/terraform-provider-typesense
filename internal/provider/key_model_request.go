@@ -7,7 +7,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func (model *KeyResourceModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKeySchema, diag.Diagnostics) {
+func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKeySchema, diag.Diagnostics) {
 	var (
 		apiKeySchema typesense_api.ApiKeySchema
 		diags        diag.Diagnostics

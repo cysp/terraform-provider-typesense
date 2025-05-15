@@ -35,7 +35,7 @@ func (r *keyResource) Configure(_ context.Context, req resource.ConfigureRequest
 }
 
 func (r *keyResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = KeyResourceSchema(ctx)
+	resp.Schema = (&KeyModel{}).ResourceSchema(ctx)
 }
 
 func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -43,7 +43,7 @@ func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateR
 }
 
 func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data KeyResourceModel
+	var data KeyModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -70,7 +70,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 }
 
 func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data KeyResourceModel
+	var data KeyModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -103,7 +103,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data KeyResourceModel
+	var data KeyModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -115,7 +115,7 @@ func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 }
 
 func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data KeyResourceModel
+	var data KeyModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
