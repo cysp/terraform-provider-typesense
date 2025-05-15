@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/cysp/terraform-provider-typesense/internal/provider/resource_key"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -36,7 +35,7 @@ func (r *keyResource) Configure(_ context.Context, req resource.ConfigureRequest
 }
 
 func (r *keyResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = resource_key.KeyResourceSchema(ctx)
+	resp.Schema = KeyResourceSchema(ctx)
 }
 
 func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -44,7 +43,7 @@ func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateR
 }
 
 func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data resource_key.KeyModel
+	var data KeyResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -71,7 +70,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 }
 
 func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data resource_key.KeyModel
+	var data KeyResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -79,7 +78,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	keyID := data.Id.ValueInt64()
+	keyID := data.ID.ValueInt64()
 
 	retrievedAPIKey, err := r.providerData.client.Key(keyID).Retrieve(ctx)
 	if err != nil {
@@ -104,7 +103,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data resource_key.KeyModel
+	var data KeyResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -116,7 +115,7 @@ func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 }
 
 func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data resource_key.KeyModel
+	var data KeyResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -124,7 +123,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	deletedAPIKey, err := r.providerData.client.Key(data.Id.ValueInt64()).Delete(ctx)
+	deletedAPIKey, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
 	if err != nil {
 		var httpError *typesense.HTTPError
 		if errors.As(err, &httpError) {

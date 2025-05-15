@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/cysp/terraform-provider-typesense/internal/provider/datasource_key"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
@@ -31,11 +30,11 @@ func (d *keyDataSource) Configure(_ context.Context, req datasource.ConfigureReq
 }
 
 func (d *keyDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = datasource_key.KeyDataSourceSchema(ctx)
+	resp.Schema = KeyDataSourceSchema(ctx)
 }
 
 func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data datasource_key.KeyModel
+	var data KeyDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -43,7 +42,7 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	keyID := data.Id.ValueInt64()
+	keyID := data.ID.ValueInt64()
 
 	retrievedAPIKey, err := d.providerData.client.Key(keyID).Retrieve(ctx)
 	if err != nil {

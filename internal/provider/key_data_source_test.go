@@ -15,9 +15,9 @@ func TestAccKeyDataSource(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
+					description = ""
 					actions = ["search:*"]
 					collections = ["*"]
-					description = ""
 				}
 
 				data "typesense_key" "test" {
