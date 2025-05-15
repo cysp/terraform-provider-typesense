@@ -30,11 +30,11 @@ func (d *keyDataSource) Configure(_ context.Context, req datasource.ConfigureReq
 }
 
 func (d *keyDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = KeyDataSourceSchema(ctx)
+	resp.Schema = (&KeyModel{}).DataSourceSchema(ctx)
 }
 
 func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data KeyDataSourceModel
+	var data KeyModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 

@@ -1,4 +1,3 @@
-//nolint:dupl,stylecheck
 package provider
 
 import (
@@ -10,7 +9,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func (model *KeyDataSourceModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
+func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	model.ID = types.Int64PointerValue(apiKey.Id)

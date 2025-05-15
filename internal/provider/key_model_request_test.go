@@ -10,7 +10,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
+func TestKeyModelToAPIKeySchema(t *testing.T) {
 	t.Parallel()
 
 	var (
@@ -19,18 +19,18 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		model    provider.KeyResourceModel
+		model    provider.KeyModel
 		expected typesense_api.ApiKeySchema
 	}{
 		"actions,collections: null": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
 			},
 			expected: typesense_api.ApiKeySchema{},
 		},
 		"actions,collections: empty": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
@@ -40,7 +40,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"actions,collections: actions": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
@@ -50,7 +50,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"actions,collections: collections": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 			},
@@ -60,7 +60,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"description: unknown": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Description: types.StringUnknown(),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
@@ -71,7 +71,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"description: null": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Description: types.StringNull(),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
@@ -82,7 +82,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"description: known": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Description: types.StringValue("description"),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
@@ -94,7 +94,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"expires at: unknown": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Unknown(),
@@ -105,7 +105,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"expires at: null": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Null(),
@@ -116,7 +116,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"expires at: known": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Value(0),
@@ -128,7 +128,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"value: unknown": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringUnknown(),
@@ -139,7 +139,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"value: null": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringNull(),
@@ -150,7 +150,7 @@ func TestKeyResourceModelToAPIKeySchema(t *testing.T) {
 			},
 		},
 		"value: known": {
-			model: provider.KeyResourceModel{
+			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringValue("value"),

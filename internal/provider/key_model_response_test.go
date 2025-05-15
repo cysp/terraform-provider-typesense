@@ -11,7 +11,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func TestKeyResourceModelReadFromResponse(t *testing.T) {
+func TestKeyModelReadFromResponse(t *testing.T) {
 	t.Parallel()
 
 	var (
@@ -21,14 +21,13 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 		farFutureTimestamp = util.FarFutureTimestamp
 	)
 
-	//nolint:dupl
 	tests := map[string]struct {
 		apiKey   typesense_api.ApiKey
-		expected provider.KeyResourceModel
+		expected provider.KeyModel
 	}{
 		"empty": {
 			apiKey: typesense_api.ApiKey{},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -38,7 +37,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				Id: &zero,
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				ID:          types.Int64Value(0),
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
@@ -50,7 +49,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 				Actions:     []string{},
 				Collections: []string{},
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
@@ -61,7 +60,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 				Actions:     []string{"*"},
 				Collections: []string{},
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
@@ -72,7 +71,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 				Actions:     []string{},
 				Collections: []string{"*"},
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
@@ -82,7 +81,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				Description: "description",
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue("description"),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -92,7 +91,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				ExpiresAt: &zero,
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -103,7 +102,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				ExpiresAt: &farFutureTimestamp,
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -114,7 +113,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				Value: &value,
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -127,7 +126,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 				Value:       &value,
 				ValuePrefix: &prefix,
 			},
-			expected: provider.KeyResourceModel{
+			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
@@ -141,7 +140,7 @@ func TestKeyResourceModelReadFromResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			model := provider.KeyResourceModel{}
+			model := provider.KeyModel{}
 
 			apiKey := test.apiKey
 			diags := model.ReadFromResponse(t.Context(), &apiKey)
