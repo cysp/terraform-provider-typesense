@@ -1,5 +1,5 @@
-//nolint:revive,stylecheck
-package datasource_key
+//nolint:dupl,stylecheck
+package provider
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
+func (model *KeyDataSourceModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	model.Id = types.Int64PointerValue(apiKey.Id)
+	model.ID = types.Int64PointerValue(apiKey.Id)
+	model.Description = types.StringValue(apiKey.Description)
+
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
-	model.Description = types.StringValue(apiKey.Description)
 
 	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
 

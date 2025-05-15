@@ -1,10 +1,9 @@
-//nolint:revive,stylecheck
-package datasource_key_test
+package provider_test
 
 import (
 	"testing"
 
-	"github.com/cysp/terraform-provider-typesense/internal/provider/datasource_key"
+	"github.com/cysp/terraform-provider-typesense/internal/provider"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -12,37 +11,38 @@ import (
 	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func TestReadFromResponse(t *testing.T) {
+func TestKeyResourceModelReadFromResponse(t *testing.T) {
 	t.Parallel()
 
 	var (
-		zero               int64 = 0
-		value                    = "value"
-		prefix                   = "prefix"
-		farFutureTimestamp       = util.FarFutureTimestamp
+		zero               int64
+		value              = "value"
+		prefix             = "prefix"
+		farFutureTimestamp = util.FarFutureTimestamp
 	)
 
+	//nolint:dupl
 	tests := map[string]struct {
 		apiKey   typesense_api.ApiKey
-		expected datasource_key.KeyModel
+		expected provider.KeyResourceModel
 	}{
 		"empty": {
 			apiKey: typesense_api.ApiKey{},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 			},
 		},
 		"id": {
 			apiKey: typesense_api.ApiKey{
 				Id: &zero,
 			},
-			expected: datasource_key.KeyModel{
-				Id:          types.Int64Value(0),
+			expected: provider.KeyResourceModel{
+				ID:          types.Int64Value(0),
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 			},
 		},
 		"actions,collections: empty": {
@@ -50,10 +50,10 @@ func TestReadFromResponse(t *testing.T) {
 				Actions:     []string{},
 				Collections: []string{},
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
-				Description: types.StringValue(""),
 			},
 		},
 		"actions,collections: actions": {
@@ -61,10 +61,10 @@ func TestReadFromResponse(t *testing.T) {
 				Actions:     []string{"*"},
 				Collections: []string{},
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
-				Description: types.StringValue(""),
 			},
 		},
 		"actions,collections: collections": {
@@ -72,30 +72,30 @@ func TestReadFromResponse(t *testing.T) {
 				Actions:     []string{},
 				Collections: []string{"*"},
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
-				Description: types.StringValue(""),
 			},
 		},
 		"description": {
 			apiKey: typesense_api.ApiKey{
 				Description: "description",
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue("description"),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue("description"),
 			},
 		},
 		"expires at": {
 			apiKey: typesense_api.ApiKey{
 				ExpiresAt: &zero,
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 				ExpiresAt:   types.Int64Value(0),
 			},
 		},
@@ -103,10 +103,10 @@ func TestReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				ExpiresAt: &farFutureTimestamp,
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 				ExpiresAt:   types.Int64Value(farFutureTimestamp),
 			},
 		},
@@ -114,10 +114,10 @@ func TestReadFromResponse(t *testing.T) {
 			apiKey: typesense_api.ApiKey{
 				Value: &value,
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 				Value:       types.StringValue("value"),
 				ValuePrefix: types.StringValue("valu"),
 			},
@@ -127,10 +127,10 @@ func TestReadFromResponse(t *testing.T) {
 				Value:       &value,
 				ValuePrefix: &prefix,
 			},
-			expected: datasource_key.KeyModel{
+			expected: provider.KeyResourceModel{
+				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				Description: types.StringValue(""),
 				Value:       types.StringValue("value"),
 				ValuePrefix: types.StringValue("prefix"),
 			},
@@ -141,7 +141,7 @@ func TestReadFromResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			model := datasource_key.KeyModel{}
+			model := provider.KeyResourceModel{}
 
 			apiKey := test.apiKey
 			diags := model.ReadFromResponse(t.Context(), &apiKey)
