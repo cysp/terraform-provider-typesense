@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/cysp/terraform-provider-typesense/internal/provider/provider_typesense"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -31,11 +30,11 @@ type TypesenseProvider struct {
 }
 
 func (p *TypesenseProvider) Schema(ctx context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = provider_typesense.TypesenseProviderSchema(ctx)
+	resp.Schema = (&TypesenseModel{}).Schema(ctx)
 }
 
 func (p *TypesenseProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data provider_typesense.TypesenseModel
+	var data TypesenseModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -44,8 +43,8 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	var typesenseURL string
-	if !data.Url.IsNull() {
-		typesenseURL = data.Url.ValueString()
+	if !data.URL.IsNull() {
+		typesenseURL = data.URL.ValueString()
 	} else if typesenseURLFromEnv, found := util.TypesenseURLFromEnv(); found {
 		typesenseURL = typesenseURLFromEnv
 	}
@@ -55,8 +54,8 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	var typesenseAPIKey string
-	if !data.ApiKey.IsNull() {
-		typesenseAPIKey = data.ApiKey.ValueString()
+	if !data.APIKey.IsNull() {
+		typesenseAPIKey = data.APIKey.ValueString()
 	} else {
 		if typesenseAPIKeyFromEnv, found := os.LookupEnv("TYPESENSE_API_KEY"); found {
 			typesenseAPIKey = typesenseAPIKeyFromEnv
