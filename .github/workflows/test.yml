@@ -52,8 +52,8 @@ jobs:
       fail-fast: false
       matrix:
         terraform:
-          - "1.7.*"
-          - "1.8.*"
+          - "1.10.*"
+          - "1.11.*"
     services:
       typesense:
         image: typesense/typesense:26.0
