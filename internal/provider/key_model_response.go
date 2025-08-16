@@ -25,7 +25,7 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense.A
 
 	if value, valueOk := apiKey.Value.Get(); valueOk {
 		model.Value = types.StringValue(value)
-		model.ValuePrefix = types.StringValue(value[:4])
+		model.ValuePrefix = types.StringValue(value[:min(4, len(value))]) //nolint:mnd
 	}
 
 	if valuePrefix, valuePrefixOk := apiKey.ValuePrefix.Get(); valuePrefixOk {
