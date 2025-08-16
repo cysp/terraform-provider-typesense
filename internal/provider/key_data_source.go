@@ -47,24 +47,23 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		KeyId: data.ID.ValueInt64(),
 	}
 
-	retrievedAPIKey, err := d.providerData.client.GetKey(ctx, params)
+	response, err := d.providerData.client.GetKey(ctx, params)
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
 	}
 
-	switch retrievedAPIKey := retrievedAPIKey.(type) {
+	switch response := response.(type) {
 	case *typesense.ApiKey:
-		resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+		resp.Diagnostics.Append(data.ReadFromResponse(ctx, response)...)
 
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
 	case *typesense.ApiResponse:
-		resp.Diagnostics.AddError("Error retrieving key", retrievedAPIKey.GetMessage())
+		resp.Diagnostics.AddError("Error retrieving key", response.GetMessage())
 
 	default:
 		resp.Diagnostics.AddError("Error retrieving key", "")
 	}
-
 }

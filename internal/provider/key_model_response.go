@@ -15,6 +15,7 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense.A
 	if keyID, keyIDOk := apiKey.ID.Get(); keyIDOk {
 		model.ID = types.Int64Value(keyID)
 	}
+
 	model.Description = types.StringValue(apiKey.Description)
 
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
