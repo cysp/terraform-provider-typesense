@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/typesense"
 )
 
 var _ provider.Provider = (*TypesenseProvider)(nil)
@@ -70,7 +70,11 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	typesenseClient := typesense.NewClient(typesense.WithServer(typesenseURL), typesense.WithAPIKey(typesenseAPIKey))
+	typesenseClient, typesenseClientErr := typesense.NewClient((typesenseURL), &TypesenseAPIKeyHeaderSecuritySource{APIKey: typesenseAPIKey})
+	if typesenseClientErr != nil {
+		resp.Diagnostics.AddError("Failed to configure client", typesenseClientErr.Error())
+		return
+	}
 
 	resp.DataSourceData = TypesenseProviderData{client: typesenseClient}
 	resp.ResourceData = TypesenseProviderData{client: typesenseClient}
