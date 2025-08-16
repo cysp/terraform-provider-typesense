@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
@@ -42,16 +43,27 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	keyID := data.ID.ValueInt64()
+	params := typesense.GetKeyParams{
+		KeyId: data.ID.ValueInt64(),
+	}
 
-	retrievedAPIKey, err := d.providerData.client.Key(keyID).Retrieve(ctx)
+	response, err := d.providerData.client.GetKey(ctx, params)
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
 	}
 
-	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+	switch response := response.(type) {
+	case *typesense.ApiKey:
+		resp.Diagnostics.Append(data.ReadFromResponse(ctx, response)...)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	case *typesense.ApiResponse:
+		resp.Diagnostics.AddError("Error retrieving key", response.GetMessage())
+
+	default:
+		resp.Diagnostics.AddError("Error retrieving key", "")
+	}
 }

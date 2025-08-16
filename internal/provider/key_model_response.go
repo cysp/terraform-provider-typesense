@@ -4,29 +4,32 @@ import (
 	"context"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
-func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
+func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense.ApiKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	model.ID = types.Int64PointerValue(apiKey.Id)
+	if keyID, keyIDOk := apiKey.ID.Get(); keyIDOk {
+		model.ID = types.Int64Value(keyID)
+	}
+
 	model.Description = types.StringValue(apiKey.Description)
 
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
 
-	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
+	model.ExpiresAt = getOptInt64Value(apiKey.ExpiresAt)
 
-	if apiKey.Value != nil {
-		model.Value = types.StringPointerValue(apiKey.Value)
-		model.ValuePrefix = types.StringValue((*apiKey.Value)[:4])
+	if value, valueOk := apiKey.Value.Get(); valueOk {
+		model.Value = types.StringValue(value)
+		model.ValuePrefix = types.StringValue(value[:min(4, len(value))]) //nolint:mnd
 	}
 
-	if apiKey.ValuePrefix != nil {
-		model.ValuePrefix = types.StringPointerValue(apiKey.ValuePrefix)
+	if valuePrefix, valuePrefixOk := apiKey.ValuePrefix.Get(); valuePrefixOk {
+		model.ValuePrefix = types.StringValue(valuePrefix)
 	}
 
 	return diags

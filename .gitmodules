@@ -1,0 +1,3 @@
+[submodule "internal/typesense-go/typesense-api-spec"]
+	path = internal/typesense-go/typesense-api-spec
+	url = git@github.com:typesense/typesense-api-spec.git
