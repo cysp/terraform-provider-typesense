@@ -21,11 +21,7 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense.A
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
 
-	if expiresAt, expiresAtOk := apiKey.ExpiresAt.Get(); expiresAtOk {
-		model.ExpiresAt = types.Int64Value(expiresAt)
-	} else {
-		model.ExpiresAt = types.Int64Null()
-	}
+	model.ExpiresAt = getOptInt64Value(apiKey.ExpiresAt)
 
 	if value, valueOk := apiKey.Value.Get(); valueOk {
 		model.Value = types.StringValue(value)

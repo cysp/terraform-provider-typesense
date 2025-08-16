@@ -18,13 +18,9 @@ func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense.ApiKeySche
 	diags.Append(model.Actions.ElementsAs(ctx, &apiKeySchema.Actions, false)...)
 	diags.Append(model.Collections.ElementsAs(ctx, &apiKeySchema.Collections, false)...)
 
-	if !model.ExpiresAt.IsUnknown() && !model.ExpiresAt.IsNull() {
-		apiKeySchema.ExpiresAt.SetTo(model.ExpiresAt.ValueInt64())
-	}
+	setOptInt64FromValue(&apiKeySchema.ExpiresAt, model.ExpiresAt)
 
-	if !model.Value.IsUnknown() && !model.Value.IsNull() {
-		apiKeySchema.Value.SetTo(model.Value.ValueString())
-	}
+	setOptStringFromValue(&apiKeySchema.Value, model.Value)
 
 	return apiKeySchema, diags
 }

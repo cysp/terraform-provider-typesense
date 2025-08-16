@@ -70,7 +70,7 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	typesenseClient, typesenseClientErr := typesense.NewClient((typesenseURL), &TypesenseAPIKeyHeaderSecuritySource{APIKey: typesenseAPIKey})
+	typesenseClient, typesenseClientErr := typesense.NewClient(typesenseURL, &TypesenseAPIKeyHeaderSecuritySource{APIKey: typesenseAPIKey})
 	if typesenseClientErr != nil {
 		resp.Diagnostics.AddError("Failed to configure client", typesenseClientErr.Error())
 
