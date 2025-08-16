@@ -16,5 +16,7 @@ generator:
       - "server/response/validation"
       - "webhooks/client"
       - "webhooks/server"
+  filters:
+    path_regex: "(^/keys$)|(^/keys/)"
   ignore_not_implemented:
     - "array defaults"
