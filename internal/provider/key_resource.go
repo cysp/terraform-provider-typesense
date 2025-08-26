@@ -2,13 +2,11 @@ package provider
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/typesense"
 )
 
 var (
@@ -57,16 +55,28 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createdKey, err := r.providerData.client.Keys().Create(ctx, &keySchema)
+	response, err := r.providerData.client.CreateKey(ctx, typesense.NewOptApiKeySchema(keySchema))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating key", err.Error())
 
 		return
 	}
 
-	resp.Diagnostics.Append(data.ReadFromResponse(ctx, createdKey)...)
+	switch response := response.(type) {
+	case *typesense.ApiKey:
+		resp.Diagnostics.Append(data.ReadFromResponse(ctx, response)...)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	case *typesense.CreateKeyBadRequest:
+		resp.Diagnostics.AddError("Error creating key", "Bad request: "+response.Message)
+
+	case *typesense.CreateKeyConflict:
+		resp.Diagnostics.AddError("Error creating key", "Conflict: "+response.Message)
+
+	default:
+		resp.Diagnostics.AddError("Error creating key", "")
+	}
 }
 
 func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -78,28 +88,36 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	keyID := data.ID.ValueInt64()
+	params := typesense.GetKeyParams{
+		KeyId: data.ID.ValueInt64(),
+	}
 
-	retrievedAPIKey, err := r.providerData.client.Key(keyID).Retrieve(ctx)
+	response, err := r.providerData.client.GetKey(ctx, params)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Key not found", "")
-				resp.State.RemoveResource(ctx)
-
-				return
-			}
-		}
-
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
 	}
 
-	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+	switch response := response.(type) {
+	case *typesense.ApiKey:
+		resp.Diagnostics.Append(data.ReadFromResponse(ctx, response)...)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	case *typesense.ApiResponse:
+		if response.GetMessage() == typesense.NotFoundResponseMessage {
+			resp.Diagnostics.AddWarning("Key not found", "")
+			resp.State.RemoveResource(ctx)
+
+			return
+		}
+
+		resp.Diagnostics.AddError("Error retrieving key", response.Message)
+
+	default:
+		resp.Diagnostics.AddError("Error retrieving key", "")
+	}
 }
 
 func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -123,21 +141,24 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	deletedAPIKey, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
+	params := typesense.DeleteKeyParams{
+		KeyId: data.ID.ValueInt64(),
+	}
+
+	response, err := r.providerData.client.DeleteKey(ctx, params)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Key not found", "")
-
-				return
-			}
-		}
-
 		resp.Diagnostics.AddError("Error deleting key", err.Error())
 
 		return
 	}
 
-	_ = deletedAPIKey
+	switch response := response.(type) {
+	case *typesense.ApiKeyDeleteResponse:
+
+	case *typesense.DeleteKeyBadRequest:
+		resp.Diagnostics.AddError("Error deleting key", "Bad request: "+response.Message)
+
+	case *typesense.DeleteKeyNotFound:
+		resp.Diagnostics.AddWarning("Key not found", "")
+	}
 }

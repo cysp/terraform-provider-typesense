@@ -5,28 +5,21 @@ import (
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider"
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/typesense/api"
 )
 
 func TestKeyModelReadFromResponse(t *testing.T) {
 	t.Parallel()
 
-	var (
-		zero               int64
-		value              = "value"
-		prefix             = "prefix"
-		farFutureTimestamp = util.FarFutureTimestamp
-	)
-
 	tests := map[string]struct {
-		apiKey   typesense_api.ApiKey
+		apiKey   typesense.ApiKey
 		expected provider.KeyModel
 	}{
 		"empty": {
-			apiKey: typesense_api.ApiKey{},
+			apiKey: typesense.ApiKey{},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
@@ -34,8 +27,8 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"id": {
-			apiKey: typesense_api.ApiKey{
-				Id: &zero,
+			apiKey: typesense.ApiKey{
+				ID: typesense.NewOptInt64(0),
 			},
 			expected: provider.KeyModel{
 				ID:          types.Int64Value(0),
@@ -45,7 +38,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: empty": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: typesense.ApiKey{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -56,7 +49,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: actions": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: typesense.ApiKey{
 				Actions:     []string{"*"},
 				Collections: []string{},
 			},
@@ -67,7 +60,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: collections": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: typesense.ApiKey{
 				Actions:     []string{},
 				Collections: []string{"*"},
 			},
@@ -78,7 +71,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"description": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: typesense.ApiKey{
 				Description: "description",
 			},
 			expected: provider.KeyModel{
@@ -88,8 +81,8 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"expires at": {
-			apiKey: typesense_api.ApiKey{
-				ExpiresAt: &zero,
+			apiKey: typesense.ApiKey{
+				ExpiresAt: typesense.NewOptInt64(0),
 			},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),
@@ -99,19 +92,19 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"expires at: far future": {
-			apiKey: typesense_api.ApiKey{
-				ExpiresAt: &farFutureTimestamp,
+			apiKey: typesense.ApiKey{
+				ExpiresAt: typesense.NewOptInt64(util.FarFutureTimestamp),
 			},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
-				ExpiresAt:   types.Int64Value(farFutureTimestamp),
+				ExpiresAt:   types.Int64Value(util.FarFutureTimestamp),
 			},
 		},
 		"value": {
-			apiKey: typesense_api.ApiKey{
-				Value: &value,
+			apiKey: typesense.ApiKey{
+				Value: typesense.NewOptString("value"),
 			},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),
@@ -122,9 +115,9 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"value,prefix": {
-			apiKey: typesense_api.ApiKey{
-				Value:       &value,
-				ValuePrefix: &prefix,
+			apiKey: typesense.ApiKey{
+				Value:       typesense.NewOptString("value"),
+				ValuePrefix: typesense.NewOptString("prefix"),
 			},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),

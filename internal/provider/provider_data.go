@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/typesense/typesense-go/typesense"
+	"github.com/cysp/terraform-provider-typesense/internal/typesense-go"
 )
 
 type TypesenseProviderData struct {

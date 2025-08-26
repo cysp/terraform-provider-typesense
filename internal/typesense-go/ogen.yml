@@ -1,0 +1,22 @@
+parser:
+  infer_types: true
+
+generator:
+  convenient_errors: "off"
+  features:
+    enable:
+      - "client/security/reentrant"
+      - "paths/client"
+      - "paths/server"
+    disable:
+      - "client/request/validation"
+      - "debug/example_tests"
+      - "ogen/otel"
+      - "ogen/unimplemented"
+      - "server/response/validation"
+      - "webhooks/client"
+      - "webhooks/server"
+  filters:
+    path_regex: "(^/keys$)|(^/keys/)"
+  ignore_not_implemented:
+    - "array defaults"
