@@ -18,7 +18,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"typesense": providerserver.NewProtocol6WithError(provider.New("test")()),
 }
 
-func providerConfigDynamicValue(config map[string]interface{}) (tfprotov6.DynamicValue, error) {
+func providerConfigDynamicValue(config map[string]any) (tfprotov6.DynamicValue, error) {
 	providerConfigTypes := map[string]tftypes.Type{
 		"url":     tftypes.String,
 		"api_key": tftypes.String,
@@ -59,24 +59,24 @@ func TestProtocol6ProviderServerConfigure(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		config          map[string]interface{}
+		config          map[string]any
 		env             map[string]string
 		expectedSuccess bool
 	}{
 		"config: url": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"url": "http://localhost:8108",
 			},
 			expectedSuccess: false,
 		},
 		"config: api_key": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"api_key": "12345",
 			},
 			expectedSuccess: false,
 		},
 		"config: url,api_key": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"url":     "http://localhost:8108",
 				"api_key": "12345",
 			},
@@ -96,7 +96,7 @@ func TestProtocol6ProviderServerConfigure(t *testing.T) {
 			expectedSuccess: true,
 		},
 		"config: url env: api_key": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"url": "http://localhost:8108",
 			},
 			env: map[string]string{
