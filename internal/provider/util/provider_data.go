@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
-func ProviderDataFromDataSourceConfigureRequest[ProviderData interface{}](req datasource.ConfigureRequest, out *ProviderData, resp *datasource.ConfigureResponse) bool {
+func ProviderDataFromDataSourceConfigureRequest[ProviderData any](req datasource.ConfigureRequest, out *ProviderData, resp *datasource.ConfigureResponse) bool {
 	if req.ProviderData == nil {
 		return false
 	}
@@ -21,7 +21,7 @@ func ProviderDataFromDataSourceConfigureRequest[ProviderData interface{}](req da
 	return false
 }
 
-func ProviderDataFromResourceConfigureRequest[ProviderData interface{}](req resource.ConfigureRequest, out *ProviderData, resp *resource.ConfigureResponse) bool {
+func ProviderDataFromResourceConfigureRequest[ProviderData any](req resource.ConfigureRequest, out *ProviderData, resp *resource.ConfigureResponse) bool {
 	if req.ProviderData == nil {
 		return false
 	}
