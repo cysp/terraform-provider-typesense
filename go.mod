@@ -1,6 +1,6 @@
 module github.com/cysp/terraform-provider-typesense
 
-go 1.25.8
+go 1.26.3
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
