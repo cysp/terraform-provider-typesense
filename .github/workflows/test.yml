@@ -52,11 +52,11 @@ jobs:
       fail-fast: false
       matrix:
         terraform:
-          - "1.10.*"
-          - "1.11.*"
+          - "1.14.*"
+          - "1.15.*"
     services:
       typesense:
-        image: typesense/typesense:26.0
+        image: typesense/typesense:28.0
         ports:
           - "8108"
         env:
@@ -78,7 +78,7 @@ jobs:
       - run: go test -v -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./internal/provider/
         env:
           TF_ACC: "1"
-          TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports[8108] }}"
+          TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports['8108'] }}"
           TYPESENSE_API_KEY: "12345"
         timeout-minutes: 10
       - uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
