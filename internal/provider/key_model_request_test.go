@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/typesense/api"
+	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestKeyModelToAPIKeySchema(t *testing.T) {
