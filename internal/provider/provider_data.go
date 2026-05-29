@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/typesense/typesense-go/typesense"
+	"github.com/typesense/typesense-go/v3/typesense"
 )
 
 type TypesenseProviderData struct {

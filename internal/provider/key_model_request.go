@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	typesense_api "github.com/typesense/typesense-go/typesense/api"
+	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKeySchema, diag.Diagnostics) {

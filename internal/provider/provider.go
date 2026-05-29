@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/typesense"
+	"github.com/typesense/typesense-go/v3/typesense"
 )
 
 var _ provider.Provider = (*TypesenseProvider)(nil)

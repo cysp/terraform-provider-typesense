@@ -6,7 +6,7 @@ import (
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	typesense_api "github.com/typesense/typesense-go/typesense/api"
+	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
