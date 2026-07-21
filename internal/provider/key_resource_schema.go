@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 
+	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -45,6 +47,7 @@ func (model *KeyModel) ResourceSchemaAttributes(_ context.Context) map[string]sc
 		"expires_at": schema.Int64Attribute{
 			Optional: true,
 			Computed: true,
+			Default:  int64default.StaticInt64(util.FarFutureTimestamp),
 			PlanModifiers: []planmodifier.Int64{
 				int64planmodifier.RequiresReplace(),
 			},
@@ -54,6 +57,7 @@ func (model *KeyModel) ResourceSchemaAttributes(_ context.Context) map[string]sc
 			Computed:  true,
 			Sensitive: true,
 			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
 				stringplanmodifier.RequiresReplace(),
 			},
 		},
