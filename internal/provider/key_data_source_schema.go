@@ -9,14 +9,15 @@ import (
 
 func (model *KeyModel) DataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Attributes: model.DataSourceSchemaAttributes(ctx),
+		Attributes: model.DataSourceSchemaAttributes(ctx, true),
 	}
 }
 
-func (*KeyModel) DataSourceSchemaAttributes(_ context.Context) map[string]schema.Attribute {
+func (*KeyModel) DataSourceSchemaAttributes(_ context.Context, requireID bool) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.Int64Attribute{
-			Required: true,
+			Required: requireID,
+			Computed: !requireID,
 		},
 		"description": schema.StringAttribute{
 			Computed: true,
