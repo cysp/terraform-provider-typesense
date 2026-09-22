@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -41,6 +44,7 @@ func TestKeyResourceLocal(t *testing.T) {
 					id = typesense_key.test.id
 				}
 				`,
+				ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectIdentity("typesense_key.test", map[string]knownvalue.Check{"id": knownvalue.Int64Exact(1)})},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("typesense_key.test", "description", "search posts"),
 					resource.TestCheckResourceAttr("typesense_key.test", "actions.0", "documents:search"),
@@ -48,10 +52,22 @@ func TestKeyResourceLocal(t *testing.T) {
 					resource.TestCheckResourceAttr("data.typesense_key.test", "description", "search posts"),
 				),
 			},
+			{
+				Config: providerConfig(server.URL) + `resource "typesense_key" "test" {
+     description = "search posts"
+     actions = ["documents:search"]
+     collections = ["posts"]
+     timeouts = { read = "1m" }
+    }
+    data "typesense_key" "test" { id = typesense_key.test.id }`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_key.test", plancheck.ResourceActionUpdate)}},
+				Check:            resource.ComposeTestCheckFunc(resource.TestCheckResourceAttr("typesense_key.test", "id", "1"), resource.TestCheckResourceAttr("typesense_key.test", "value", "test-key-1")),
+			},
 		},
 	})
 
 	assert.Empty(t, keys)
+	assert.EqualValues(t, 2, nextID)
 }
 
 func handleLocalKeyRequest(

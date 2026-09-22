@@ -2,17 +2,17 @@ package provider
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/v3/typesense"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
 	_ resource.Resource                = (*keyResource)(nil)
+	_ resource.ResourceWithIdentity    = (*keyResource)(nil)
 	_ resource.ResourceWithConfigure   = (*keyResource)(nil)
 	_ resource.ResourceWithImportState = (*keyResource)(nil)
 )
@@ -39,13 +39,29 @@ func (r *keyResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 }
 
 func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.Identity != nil && req.ID == "" {
+		var id types.Int64
+		resp.Diagnostics.Append(req.Identity.GetAttribute(ctx, path.Root("id"), &id)...)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+
+		return
+	}
+
 	util.ImportStatePassthroughInt64ID(ctx, path.Root("id"), req, resp)
 }
 
+//nolint:dupl // Keep the framework lifecycle and resource-specific API calls explicit.
 func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data KeyModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := operationContext(ctx, data.Timeouts.Create, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -66,6 +82,10 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	resp.Diagnostics.Append(data.ReadFromResponse(ctx, createdKey)...)
 
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("id"), data.ID)...)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -78,17 +98,21 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
+	ctx, cancel := operationContext(ctx, data.Timeouts.Read, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	keyID := data.ID.ValueInt64()
 
-	retrievedAPIKey, err := r.providerData.client.Key(keyID).Retrieve(ctx)
+	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Key(keyID).Retrieve)
 	if err != nil {
-		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Key not found", "")
-				resp.State.RemoveResource(ctx)
+		if typesenseNotFound(err) {
+			resp.State.RemoveResource(ctx)
 
-				return
-			}
+			return
 		}
 
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
@@ -97,6 +121,10 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("id"), data.ID)...)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -110,7 +138,29 @@ func (r *keyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	resp.Diagnostics.AddError("Cannot update key", "")
+	ctx, cancel := operationContext(ctx, data.Timeouts.Update, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Remote key attributes require replacement; only local timeouts can update.
+	var state KeyModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.Timeouts = data.Timeouts
+
+	data = state
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("id"), data.ID)...)
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -122,20 +172,19 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	deletedAPIKey, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
-	if err != nil {
-		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Key not found", "")
+	ctx, cancel := operationContext(ctx, data.Timeouts.Delete, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
 
-				return
-			}
-		}
-
-		resp.Diagnostics.AddError("Error deleting key", err.Error())
-
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	_ = deletedAPIKey
+	_, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
+	if err != nil && !typesenseNotFound(err) {
+		resp.Diagnostics.AddError("Error deleting key", err.Error())
+	}
+}
+
+func (r *keyResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{Attributes: map[string]identityschema.Attribute{"id": identityschema.Int64Attribute{RequiredForImport: true, Description: "Typesense key id."}}}
 }

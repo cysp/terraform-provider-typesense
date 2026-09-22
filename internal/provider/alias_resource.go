@@ -2,17 +2,16 @@ package provider
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/v3/typesense"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 )
 
 var (
 	_ resource.Resource                = (*aliasResource)(nil)
+	_ resource.ResourceWithIdentity    = (*aliasResource)(nil)
 	_ resource.ResourceWithConfigure   = (*aliasResource)(nil)
 	_ resource.ResourceWithImportState = (*aliasResource)(nil)
 )
@@ -39,13 +38,20 @@ func (r *aliasResource) Schema(ctx context.Context, _ resource.SchemaRequest, re
 }
 
 func (r *aliasResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	resource.ImportStatePassthroughWithIdentity(ctx, path.Root("name"), path.Root("name"), req, resp)
 }
 
 func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data AliasModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := operationContext(ctx, data.Timeouts.Create, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -61,6 +67,11 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	data.ReadFromResponse(createdAlias)
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("name"), data.Name)...)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -73,15 +84,19 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	retrievedAlias, err := r.providerData.client.Alias(data.Name.ValueString()).Retrieve(ctx)
-	if err != nil {
-		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Alias not found", "")
-				resp.State.RemoveResource(ctx)
+	ctx, cancel := operationContext(ctx, data.Timeouts.Read, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
 
-				return
-			}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	retrievedAlias, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Alias(data.Name.ValueString()).Retrieve)
+	if err != nil {
+		if typesenseNotFound(err) {
+			resp.State.RemoveResource(ctx)
+
+			return
 		}
 
 		resp.Diagnostics.AddError("Error retrieving alias", err.Error())
@@ -90,6 +105,11 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	data.ReadFromResponse(retrievedAlias)
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("name"), data.Name)...)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -99,6 +119,26 @@ func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := operationContext(ctx, data.Timeouts.Update, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state AliasModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.CollectionName.Equal(state.CollectionName) {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
 		return
 	}
 
@@ -112,6 +152,11 @@ func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	data.ReadFromResponse(updatedAlias)
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("name"), data.Name)...)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -124,20 +169,19 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	deletedAlias, err := r.providerData.client.Alias(data.Name.ValueString()).Delete(ctx)
-	if err != nil {
-		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
-			if httpError.Status == http.StatusNotFound {
-				resp.Diagnostics.AddWarning("Alias not found", "")
+	ctx, cancel := operationContext(ctx, data.Timeouts.Delete, defaultOperationTimeout, &resp.Diagnostics)
+	defer cancel()
 
-				return
-			}
-		}
-
-		resp.Diagnostics.AddError("Error deleting alias", err.Error())
-
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	_ = deletedAlias
+	_, err := r.providerData.client.Alias(data.Name.ValueString()).Delete(ctx)
+	if err != nil && !typesenseNotFound(err) {
+		resp.Diagnostics.AddError("Error deleting alias", err.Error())
+	}
+}
+
+func (r *aliasResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{Attributes: map[string]identityschema.Attribute{"name": identityschema.StringAttribute{RequiredForImport: true, Description: "Typesense alias name."}}}
 }

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -13,52 +14,62 @@ import (
 
 func (model *KeyModel) ResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Attributes: model.ResourceSchemaAttributes(ctx),
+		MarkdownDescription: "Manages a Typesense API key. Changes to permissions, description, expiration or the secret replace the key.",
+		Attributes:          model.ResourceSchemaAttributes(ctx),
 	}
 }
 
-func (model *KeyModel) ResourceSchemaAttributes(_ context.Context) map[string]schema.Attribute {
+func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
+		"timeouts": timeouts.AttributesAll(ctx),
 		"id": schema.Int64Attribute{
-			Computed: true,
+			PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
+			MarkdownDescription: "Typesense key identifier. Import using its decimal representation.",
+			Computed:            true,
 		},
 		"description": schema.StringAttribute{
-			Required: true,
+			MarkdownDescription: "Description of the key. Changes replace the key.",
+			Required:            true,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
 		},
 		"actions": schema.ListAttribute{
-			ElementType: types.StringType,
-			Required:    true,
+			MarkdownDescription: "Allowed Typesense actions. Changes replace the key.",
+			ElementType:         types.StringType,
+			Required:            true,
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.RequiresReplace(),
 			},
 		},
 		"collections": schema.ListAttribute{
-			ElementType: types.StringType,
-			Required:    true,
+			MarkdownDescription: "Collection names or patterns permitted by this key. Changes replace the key.",
+			ElementType:         types.StringType,
+			Required:            true,
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.RequiresReplace(),
 			},
 		},
 		"expires_at": schema.Int64Attribute{
-			Optional: true,
-			Computed: true,
+			MarkdownDescription: "Expiration as Unix seconds. When omitted, Typesense sets a far-future expiration date. Changes replace the key.",
+			Optional:            true,
+			Computed:            true,
 			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.RequiresReplace(),
+				int64planmodifier.RequiresReplaceIfConfigured(),
 			},
 		},
 		"value": schema.StringAttribute{
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
+			MarkdownDescription: "Secret API key. Omit to generate a key. Typesense returns it only on creation; the provider retains it in state across refresh. Import cannot recover it. Changes replace the key. Sensitive values are still stored in Terraform state.",
+			Optional:            true,
+			Computed:            true,
+			Sensitive:           true,
 			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
+				stringplanmodifier.RequiresReplaceIfConfigured(),
 			},
 		},
 		"value_prefix": schema.StringAttribute{
-			Computed: true,
+			MarkdownDescription: "Prefix returned by Typesense when retrieving key metadata.",
+			Computed:            true,
 		},
 	}
 }

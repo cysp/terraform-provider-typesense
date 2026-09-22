@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -32,11 +34,15 @@ func TestAliasResourceLocal(t *testing.T) {
 					collection_name = "posts_v1"
 				}
 				`,
+				ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectIdentity("typesense_alias.test", map[string]knownvalue.Check{"name": knownvalue.StringExact("posts")})},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("typesense_alias.test", "name", "posts"),
 					resource.TestCheckResourceAttr("typesense_alias.test", "collection_name", "posts_v1"),
 				),
 			},
+			{ResourceName: "typesense_alias.test", ImportState: true, ImportStateId: "posts", ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name"},
+			{ResourceName: "typesense_alias.test", ImportState: true, ImportStateKind: resource.ImportBlockWithResourceIdentity},
+
 			{
 				Config: providerConfig(server.URL) + `
 				resource "typesense_alias" "test" {
