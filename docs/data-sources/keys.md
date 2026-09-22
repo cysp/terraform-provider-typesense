@@ -3,12 +3,12 @@
 page_title: "typesense_keys Data Source - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  Lists metadata for all Typesense API keys. Requires the keys:list action. The bootstrap key and scoped search keys are not included. Key secrets are never returned.
+  Lists metadata for all Typesense API keys. Requires the keys:list action. The bootstrap key and scoped search keys are not included. Returns the server's value_prefix unchanged, but does not expose a value attribute. Short secrets can be fully visible in the prefix.
 ---
 
 # typesense_keys (Data Source)
 
-Lists metadata for all Typesense API keys. Requires the `keys:list` action. The bootstrap key and scoped search keys are not included. Key secrets are never returned.
+Lists metadata for all Typesense API keys. Requires the `keys:list` action. The bootstrap key and scoped search keys are not included. Returns the server's `value_prefix` unchanged, but does not expose a `value` attribute. Short secrets can be fully visible in the prefix.
 
 ## Example Usage
 
@@ -34,6 +34,6 @@ Read-Only:
 - `description` (String) Description returned by Typesense.
 - `expires_at` (Number) Key expiration as Unix seconds, returned by Typesense.
 - `id` (Number) Identifier of the key returned by Typesense.
-- `value_prefix` (String) Prefix returned by the key metadata endpoint. This is not the complete key secret.
+- `value_prefix` (String) Prefix returned by Typesense, used unchanged. It contains up to the first four bytes of the key, so a secret of four bytes or fewer is fully visible. This attribute is not marked sensitive.
 
 

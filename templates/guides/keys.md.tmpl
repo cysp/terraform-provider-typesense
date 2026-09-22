@@ -29,9 +29,11 @@ An expired key with `autodelete = false` remains a managed remote object. Terraf
 
 ## Secrets and metadata
 
-Omit `value` to have Typesense generate a secret, or configure a unique secret explicitly. Typesense returns the full secret only when creating the key. Terraform retains that secret across refresh; `sensitive` hides it in ordinary output but it remains in state and saved plans.
+Omit `value` to have Typesense generate a secret, or configure a unique secret explicitly. Typesense returns the `value` field only when creating the key. Terraform retains it across refresh; `sensitive` hides the `value` attribute in ordinary output but it remains in state and saved plans.
 
-Import cannot recover the secret. Both data sources expose metadata, including `value_prefix` and `autodelete`, and never expose a full secret. The listing is ordered by numeric key id and returns an empty list when no keys exist. A missing singular lookup produces an error.
+Import does not populate `value`. Both data sources omit the `value` attribute and expose metadata, including `value_prefix` and `autodelete`. The provider uses the server's `value_prefix` unchanged: Typesense returns up to the first four bytes of the key. For custom secrets of four bytes or fewer, that prefix is the entire usable key. The prefix is not marked sensitive, so metadata lookups and Terraform output can reveal those short keys. Prefer server-generated keys or sufficiently long, high-entropy custom secrets.
+
+The listing is ordered by numeric key id and returns an empty list when no keys exist. A missing singular lookup produces an error.
 
 ## Rotation and revocation
 

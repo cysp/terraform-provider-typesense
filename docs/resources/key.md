@@ -40,12 +40,12 @@ See [API key lifecycle](../guides/keys) for permissions, expiration, rotation an
 - `autodelete` (Boolean) Automatically delete this key after expiration during the server's periodic cleanup. When omitted, new keys use the server default (false) and existing keys retain their setting. Explicit changes replace the key. Expiration disables authentication independently of cleanup.
 - `expires_at` (Number) Expiration as Unix seconds. When omitted, Typesense sets a far-future expiration date. Changes replace the key.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
-- `value` (String, Sensitive) Secret API key. Omit to generate a key. Typesense returns it only on creation; the provider retains it in state across refresh. Import cannot recover it. Changes replace the key. Sensitive values are still stored in Terraform state.
+- `value` (String, Sensitive) Secret API key. Omit to generate a key. Typesense returns the `value` field only on creation; the provider retains it in state across refresh. Import does not populate this attribute. Changes replace the key. Sensitive values are still stored in Terraform state.
 
 ### Read-Only
 
 - `id` (Number) Typesense key identifier. Import using its decimal representation.
-- `value_prefix` (String) Prefix returned by Typesense when retrieving key metadata.
+- `value_prefix` (String) Prefix returned by Typesense when retrieving key metadata, used unchanged. It contains up to the first four bytes of the key, so a secret of four bytes or fewer is fully visible. This attribute is not marked sensitive.
 
 <a id="nestedatt--timeouts"></a>
 ### Nested Schema for `timeouts`

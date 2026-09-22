@@ -66,7 +66,7 @@ func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]
 			PlanModifiers:       []planmodifier.Bool{boolplanmodifier.RequiresReplaceIfConfigured()},
 		},
 		"value": schema.StringAttribute{
-			MarkdownDescription: "Secret API key. Omit to generate a key. Typesense returns it only on creation; the provider retains it in state across refresh. Import cannot recover it. Changes replace the key. Sensitive values are still stored in Terraform state.",
+			MarkdownDescription: "Secret API key. Omit to generate a key. Typesense returns the `value` field only on creation; the provider retains it in state across refresh. Import does not populate this attribute. Changes replace the key. Sensitive values are still stored in Terraform state.",
 			Optional:            true,
 			Computed:            true,
 			Sensitive:           true,
@@ -75,7 +75,7 @@ func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]
 			},
 		},
 		"value_prefix": schema.StringAttribute{
-			MarkdownDescription: "Prefix returned by Typesense when retrieving key metadata.",
+			MarkdownDescription: "Prefix returned by Typesense when retrieving key metadata, used unchanged. It contains up to the first four bytes of the key, so a secret of four bytes or fewer is fully visible. This attribute is not marked sensitive.",
 			Computed:            true,
 		},
 	}
