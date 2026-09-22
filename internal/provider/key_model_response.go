@@ -9,6 +9,8 @@ import (
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
+const keyPrefixLength = 4
+
 func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -22,7 +24,7 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_a
 
 	if apiKey.Value != nil {
 		model.Value = types.StringPointerValue(apiKey.Value)
-		model.ValuePrefix = types.StringValue((*apiKey.Value)[:4])
+		model.ValuePrefix = types.StringValue((*apiKey.Value)[:min(keyPrefixLength, len(*apiKey.Value))])
 	}
 
 	if apiKey.ValuePrefix != nil {
