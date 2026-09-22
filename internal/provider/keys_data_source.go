@@ -55,7 +55,7 @@ func (d *keysDataSource) Read(ctx context.Context, _ datasource.ReadRequest, res
 	ctx, cancel := context.WithTimeout(ctx, defaultOperationTimeout)
 	defer cancel()
 
-	keys, err := d.providerData.client.Keys().Retrieve(ctx)
+	keys, err := d.providerData.keys.list(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving keys", err.Error())
 
@@ -64,13 +64,9 @@ func (d *keysDataSource) Read(ctx context.Context, _ datasource.ReadRequest, res
 
 	data := KeysModel{Keys: make([]KeyDataSourceModel, 0, len(keys))}
 	for _, key := range keys {
-		if key == nil {
-			continue
-		}
-
 		var model KeyModel
 		resp.Diagnostics.Append(model.ReadFromResponse(ctx, key)...)
-		data.Keys = append(data.Keys, KeyDataSourceModel{ID: model.ID, Description: model.Description, Actions: model.Actions, Collections: model.Collections, ExpiresAt: model.ExpiresAt, ValuePrefix: model.ValuePrefix})
+		data.Keys = append(data.Keys, KeyDataSourceModel{ID: model.ID, Description: model.Description, Actions: model.Actions, Collections: model.Collections, Autodelete: model.Autodelete, ExpiresAt: model.ExpiresAt, ValuePrefix: model.ValuePrefix})
 	}
 
 	if resp.Diagnostics.HasError() {

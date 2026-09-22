@@ -6,7 +6,6 @@ import (
 	"github.com/cysp/terraform-provider-typesense/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestKeyResponseShortSecret(t *testing.T) {
@@ -17,10 +16,10 @@ func TestKeyResponseShortSecret(t *testing.T) {
 			t.Parallel()
 
 			var model provider.KeyModel
-			assert.Empty(t, model.ReadFromResponse(t.Context(), &api.ApiKey{Value: &secret}))
+			assert.Empty(t, model.ReadFromResponse(t.Context(), &provider.KeyResponse{Value: &secret}))
 			assert.Equal(t, types.StringValue(secret), model.Value)
 			assert.Equal(t, types.StringValue(prefix), model.ValuePrefix)
-			assert.Empty(t, model.ReadFromResponse(t.Context(), &api.ApiKey{}))
+			assert.Empty(t, model.ReadFromResponse(t.Context(), &provider.KeyResponse{}))
 			assert.Equal(t, types.StringValue(secret), model.Value)
 		})
 	}

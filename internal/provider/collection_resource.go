@@ -42,7 +42,6 @@ func (r *collectionResource) ImportState(ctx context.Context, req resource.Impor
 	resource.ImportStatePassthroughWithIdentity(ctx, path.Root("name"), path.Root("name"), req, resp)
 }
 
-//nolint:dupl // Keep the framework lifecycle and resource-specific API calls explicit.
 func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data CollectionModel
 

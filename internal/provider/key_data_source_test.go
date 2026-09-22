@@ -16,7 +16,7 @@ func TestAccKeyDataSource(t *testing.T) {
 				Config: `
 				resource "typesense_key" "test" {
 					description = ""
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 				}
 
@@ -29,7 +29,7 @@ func TestAccKeyDataSource(t *testing.T) {
 				}
 				`,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckOutput("typesense_key_test_action", "search:*"),
+					resource.TestCheckOutput("typesense_key_test_action", "documents:search"),
 				),
 			},
 		},

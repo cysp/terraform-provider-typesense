@@ -6,12 +6,11 @@ import (
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 const keyPrefixLength = 4
 
-func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_api.ApiKey) diag.Diagnostics {
+func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *KeyResponse) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	model.ID = types.Int64PointerValue(apiKey.Id)
@@ -19,6 +18,8 @@ func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *typesense_a
 
 	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
 	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
+
+	model.Autodelete = types.BoolPointerValue(apiKey.Autodelete)
 
 	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
 

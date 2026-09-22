@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -14,7 +15,7 @@ import (
 
 func (model *KeyModel) ResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages a Typesense API key. Changes to permissions, description, expiration or the secret replace the key.",
+		MarkdownDescription: "Manages a Typesense API key. Changes to permissions, description, expiration, automatic deletion or the secret replace the key.",
 		Attributes:          model.ResourceSchemaAttributes(ctx),
 	}
 }
@@ -35,7 +36,7 @@ func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]
 			},
 		},
 		"actions": schema.ListAttribute{
-			MarkdownDescription: "Allowed Typesense actions. Changes replace the key.",
+			MarkdownDescription: "Allowed Typesense actions, such as `documents:search`. Order and duplicates are preserved. Changes replace the key.",
 			ElementType:         types.StringType,
 			Required:            true,
 			PlanModifiers: []planmodifier.List{
@@ -43,7 +44,7 @@ func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]
 			},
 		},
 		"collections": schema.ListAttribute{
-			MarkdownDescription: "Collection names or patterns permitted by this key. Changes replace the key.",
+			MarkdownDescription: "Collection names or regular expressions permitted by this key. Order and duplicates are preserved. These restrictions do not limit global endpoints such as keys. Changes replace the key.",
 			ElementType:         types.StringType,
 			Required:            true,
 			PlanModifiers: []planmodifier.List{
@@ -57,6 +58,12 @@ func (model *KeyModel) ResourceSchemaAttributes(ctx context.Context) map[string]
 			PlanModifiers: []planmodifier.Int64{
 				int64planmodifier.RequiresReplaceIfConfigured(),
 			},
+		},
+		"autodelete": schema.BoolAttribute{
+			MarkdownDescription: "Automatically delete this key after expiration during the server's periodic cleanup. When omitted, new keys use the server default (false) and existing keys retain their setting. Explicit changes replace the key. Expiration disables authentication independently of cleanup.",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers:       []planmodifier.Bool{boolplanmodifier.RequiresReplaceIfConfigured()},
 		},
 		"value": schema.StringAttribute{
 			MarkdownDescription: "Secret API key. Omit to generate a key. Typesense returns it only on creation; the provider retains it in state across refresh. Import cannot recover it. Changes replace the key. Sensitive values are still stored in Terraform state.",

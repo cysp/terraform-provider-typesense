@@ -49,7 +49,7 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	keyID := data.ID.ValueInt64()
 
-	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, d.providerData.client.Key(keyID).Retrieve)
+	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) { return d.providerData.keys.retrieve(ctx, keyID) })
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
@@ -58,7 +58,7 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &KeyDataSourceModel{ID: data.ID, Description: data.Description, Actions: data.Actions, Collections: data.Collections, ExpiresAt: data.ExpiresAt, ValuePrefix: data.ValuePrefix})...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &KeyDataSourceModel{ID: data.ID, Description: data.Description, Actions: data.Actions, Collections: data.Collections, Autodelete: data.Autodelete, ExpiresAt: data.ExpiresAt, ValuePrefix: data.ValuePrefix})...)
 }
 
 // KeyDataSourceModel describes metadata returned by the key retrieval API.
@@ -67,6 +67,7 @@ type KeyDataSourceModel struct {
 	Description types.String `tfsdk:"description"`
 	Actions     types.List   `tfsdk:"actions"`
 	Collections types.List   `tfsdk:"collections"`
+	Autodelete  types.Bool   `tfsdk:"autodelete"`
 	ExpiresAt   types.Int64  `tfsdk:"expires_at"`
 	ValuePrefix types.String `tfsdk:"value_prefix"`
 }

@@ -170,7 +170,8 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 			apiKeySchema, diags := test.model.ToAPIKeySchema(t.Context())
 
 			assert.Empty(t, diags)
-			assert.Equal(t, test.expected, apiKeySchema)
+			assert.Equal(t, test.expected, apiKeySchema.ApiKeySchema)
+			assert.Nil(t, apiKeySchema.Autodelete)
 		})
 	}
 }

@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKeySchema, diag.Diagnostics) {
+func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (KeySchema, diag.Diagnostics) {
 	var (
-		apiKeySchema typesense_api.ApiKeySchema
+		apiKeySchema KeySchema
 		diags        diag.Diagnostics
 	)
 
@@ -24,6 +23,10 @@ func (model *KeyModel) ToAPIKeySchema(ctx context.Context) (typesense_api.ApiKey
 
 	if !model.Value.IsUnknown() {
 		apiKeySchema.Value = model.Value.ValueStringPointer()
+	}
+
+	if !model.Autodelete.IsUnknown() {
+		apiKeySchema.Autodelete = model.Autodelete.ValueBoolPointer()
 	}
 
 	return apiKeySchema, diags

@@ -17,7 +17,7 @@ func TestAccKeyResource(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}
@@ -39,7 +39,7 @@ func TestAccKeyResource(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 					expires_at = 64723363199
@@ -57,7 +57,7 @@ func TestAccKeyResource(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 					expires_at = 0
@@ -75,13 +75,13 @@ func TestAccKeyResource(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = "testacc key"
 				}
 
 				resource "typesense_key" "test_clone" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = "testacc key clone"
 					value = typesense_key.test.value
@@ -102,7 +102,7 @@ func TestAccKeyResourceImport(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}
@@ -131,7 +131,7 @@ func TestAccKeyResourceDeleted(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}
@@ -140,7 +140,7 @@ func TestAccKeyResourceDeleted(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}
@@ -151,7 +151,7 @@ func TestAccKeyResourceDeleted(t *testing.T) {
 				}
 
 				resource "typesense_key" "test_dup" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}
@@ -160,7 +160,7 @@ func TestAccKeyResourceDeleted(t *testing.T) {
 			{
 				Config: `
 				resource "typesense_key" "test" {
-					actions = ["search:*"]
+					actions = ["documents:search"]
 					collections = ["*"]
 					description = ""
 				}

@@ -9,7 +9,7 @@ import (
 
 func (model *KeyDataSourceModel) DataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Retrieves metadata for a Typesense API key by its id. This lookup does not return the key secret.",
+		MarkdownDescription: "Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. This lookup does not return the key secret.",
 		Attributes:          model.DataSourceSchemaAttributes(ctx),
 	}
 }
@@ -36,6 +36,10 @@ func (*KeyDataSourceModel) DataSourceSchemaAttributes(_ context.Context) map[str
 		},
 		"expires_at": schema.Int64Attribute{
 			MarkdownDescription: "Key expiration as Unix seconds, returned by Typesense.",
+			Computed:            true,
+		},
+		"autodelete": schema.BoolAttribute{
+			MarkdownDescription: "Whether Typesense automatically deletes this key after expiration during periodic cleanup.",
 			Computed:            true,
 		},
 		"value_prefix": schema.StringAttribute{
