@@ -16,6 +16,15 @@ description: |-
 {{tffile .ExampleFile }}
 {{- end }}
 
+{{ if eq .Name "typesense_collection" -}}
+## Timeouts
+
+Collection updates default to thirty minutes. Create, read and delete operations default to five minutes. Set `timeouts` to override these limits.
+{{ else if or (eq .Name "typesense_alias") (eq .Name "typesense_key") -}}
+## Timeouts
+
+Operations default to five minutes. Set `timeouts` to override these limits. Changing a timeout does not change the Typesense object.
+{{ end }}
 {{ .SchemaMarkdown | trimspace }}
 
 {{ if .HasImport -}}
@@ -24,4 +33,6 @@ description: |-
 Import is supported using the following syntax:
 
 {{codefile "shell" .ImportFile }}
+
+See [Importing existing resources](../guides/importing) for import blocks using resource identities.
 {{- end }}
