@@ -63,6 +63,12 @@ func TestProtocol6ProviderServerConfigure(t *testing.T) {
 		env             map[string]string
 		expectedSuccess bool
 	}{
+		"unknown url":            {config: map[string]any{"url": tftypes.UnknownValue, "api_key": "test"}},
+		"unknown key":            {config: map[string]any{"url": "https://example.invalid", "api_key": tftypes.UnknownValue}},
+		"relative url":           {config: map[string]any{"url": "/typesense", "api_key": "test"}},
+		"unsupported scheme":     {config: map[string]any{"url": "ftp://example.invalid", "api_key": "test"}},
+		"credential-bearing url": {config: map[string]any{"url": "https://user@example.invalid", "api_key": "test"}},
+
 		"config: url": {
 			config: map[string]any{
 				"url": "http://localhost:8108",

@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
@@ -10,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/typesense/typesense-go/v3/typesense"
+	typesenseapi "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var _ provider.Provider = (*TypesenseProvider)(nil)
@@ -42,6 +45,18 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
+	if data.URL.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("url"), "Unknown API URL", "The Typesense URL must be known before the provider can perform operations.")
+	}
+
+	if data.APIKey.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(path.Root("api_key"), "Unknown API key", "The Typesense API key must be known before the provider can perform operations.")
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	var typesenseURL string
 	if !data.URL.IsNull() {
 		typesenseURL = data.URL.ValueString()
@@ -49,8 +64,12 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 		typesenseURL = typesenseURLFromEnv
 	}
 
+	endpoint, endpointErr := url.Parse(typesenseURL)
+
 	if typesenseURL == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("url"), "Failed to configure client", "No API URL provided")
+		resp.Diagnostics.AddAttributeError(path.Root("url"), "Missing API URL", "Set url, TYPESENSE_URL, or TYPESENSE_HOST with optional TYPESENSE_PROTOCOL and TYPESENSE_PORT.")
+	} else if endpointErr != nil || endpoint.Hostname() == "" || (endpoint.Scheme != "http" && endpoint.Scheme != "https") || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		resp.Diagnostics.AddAttributeError(path.Root("url"), "Invalid API URL", "Use an absolute HTTP or HTTPS URL with a host and without user information, query parameters, or a fragment.")
 	}
 
 	var typesenseAPIKey string
@@ -63,17 +82,32 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if typesenseAPIKey == "" {
-		resp.Diagnostics.AddAttributeError(path.Root("api_key"), "Failed to configure client", "No API key provided")
+		resp.Diagnostics.AddAttributeError(path.Root("api_key"), "Missing API key", "Set api_key or the TYPESENSE_API_KEY environment variable.")
 	}
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	typesenseClient := typesense.NewClient(typesense.WithServer(typesenseURL), typesense.WithAPIKey(typesenseAPIKey))
+	// Operation contexts own deadlines. A redirect can replay a mutation or
+	// forward credentials, so return the original response instead.
+	apiClient, err := typesenseapi.NewClientWithResponses(typesenseURL,
+		typesenseapi.WithAPIKey(typesenseAPIKey),
+		typesenseapi.WithHTTPClient(&http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		}}),
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("url"), "Invalid API URL", "The Typesense client could not initialize the configured endpoint.")
 
-	resp.DataSourceData = TypesenseProviderData{client: typesenseClient}
-	resp.ResourceData = TypesenseProviderData{client: typesenseClient}
+		return
+	}
+
+	typesenseClient := typesense.NewClient(typesense.WithAPIClient(apiClient))
+
+	dataSourceData := TypesenseProviderData{client: typesenseClient, alter: make(chan struct{}, 1)}
+	resp.DataSourceData = dataSourceData
+	resp.ResourceData = dataSourceData
 }
 
 func (p *TypesenseProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {

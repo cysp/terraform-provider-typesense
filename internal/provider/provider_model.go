@@ -14,7 +14,8 @@ type TypesenseModel struct {
 
 func (m *TypesenseModel) Schema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Attributes: m.SchemaAttributes(ctx),
+		MarkdownDescription: "Manage Typesense collections, aliases, and API keys. Tested with Terraform 1.15/1.16 and Typesense 29.1/30.2.",
+		Attributes:          m.SchemaAttributes(ctx),
 	}
 }
 
@@ -22,13 +23,14 @@ func (m *TypesenseModel) SchemaAttributes(_ context.Context) map[string]schema.A
 	return map[string]schema.Attribute{
 		"url": schema.StringAttribute{
 			Optional:            true,
-			Description:         "Typesense API URL. Alternatively, can be configured using the `TYPESENSE_URL` environment variable. Alternatively alternatively, can be configured using the `TYPESENSE_PROTOCOL`, `TYPESENSE_HOST` and `TYPESENSE_PORT` environment variables.",
-			MarkdownDescription: "Typesense API URL. Alternatively, can be configured using the `TYPESENSE_URL` environment variable. Alternatively alternatively, can be configured using the `TYPESENSE_PROTOCOL`, `TYPESENSE_HOST` and `TYPESENSE_PORT` environment variables.",
+			Description:         "Absolute HTTP or HTTPS Typesense endpoint. Resolution order: url, TYPESENSE_URL, then TYPESENSE_HOST with optional TYPESENSE_PROTOCOL and TYPESENSE_PORT. URLs must not contain credentials, query parameters, or fragments.",
+			MarkdownDescription: "Absolute HTTP or HTTPS Typesense endpoint. Resolution order: url, TYPESENSE_URL, then TYPESENSE_HOST with optional TYPESENSE_PROTOCOL and TYPESENSE_PORT. URLs must not contain credentials, query parameters, or fragments.",
 		},
 		"api_key": schema.StringAttribute{
 			Optional:            true,
-			Description:         "Typesense Admin API Key. Alternatively, can be configured using the `TYPESENSE_API_KEY` environment variable.",
-			MarkdownDescription: "Typesense Admin API Key. Alternatively, can be configured using the `TYPESENSE_API_KEY` environment variable.",
+			Sensitive:           true,
+			Description:         "Typesense API key with permission for the managed operations. Uses TYPESENSE_API_KEY when omitted.",
+			MarkdownDescription: "Typesense API key with permission for the managed operations. Uses TYPESENSE_API_KEY when omitted.",
 		},
 	}
 }
