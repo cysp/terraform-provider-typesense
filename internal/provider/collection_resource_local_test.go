@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -39,12 +42,16 @@ func TestCollectionResourceLocal(t *testing.T) {
 					]
 				}
 				`,
+				ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectIdentity("typesense_collection.test", map[string]knownvalue.Check{"name": knownvalue.StringExact("posts")})},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("typesense_collection.test", "name", "posts"),
 					resource.TestCheckResourceAttr("typesense_collection.test", "fields.0.name", "title"),
 					resource.TestCheckResourceAttr("typesense_collection.test", "fields.0.type", "string"),
 				),
 			},
+			{ResourceName: "typesense_collection.test", ImportState: true, ImportStateId: "posts", ImportStateVerify: true, ImportStateVerifyIdentifierAttribute: "name"},
+			{ResourceName: "typesense_collection.test", ImportState: true, ImportStateKind: resource.ImportBlockWithResourceIdentity},
+
 			{
 				Config: providerConfig(server.URL) + `
 				resource "typesense_collection" "test" {
@@ -61,7 +68,7 @@ func TestCollectionResourceLocal(t *testing.T) {
 				`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.TestCheckResourceAttr("typesense_collection.test", "fields.0.facet", "true"),
@@ -93,11 +100,44 @@ func handleLocalCollectionRequest(
 		}
 
 		collection := typesense_api.CollectionResponse{
-			Name:   schema.Name,
-			Fields: schema.Fields,
+			Name:               schema.Name,
+			EnableNestedFields: schema.EnableNestedFields,
+			Fields:             schema.Fields,
 		}
 		collections[schema.Name] = collection
 		writeJSON(t, w, http.StatusCreated, collection)
+	case req.Method == http.MethodPatch:
+		name := pathSuffix(req.URL.Path, "/collections/")
+
+		collection, ok := collections[name]
+		if !ok {
+			http.NotFound(w, req)
+
+			return
+		}
+
+		var patch typesense_api.CollectionUpdateSchema
+
+		err := json.NewDecoder(req.Body).Decode(&patch)
+		if err != nil {
+			t.Error(err)
+			http.Error(w, "bad patch", http.StatusBadRequest)
+
+			return
+		}
+
+		for _, field := range patch.Fields {
+			if field.Drop != nil && *field.Drop {
+				collection.Fields = slices.DeleteFunc(collection.Fields, func(old typesense_api.Field) bool { return old.Name == field.Name })
+			} else {
+				collection.Fields = append(collection.Fields, field)
+			}
+		}
+
+		collections[name] = collection
+
+		writeJSON(t, w, http.StatusOK, patch)
+
 	case req.Method == http.MethodGet:
 		collectionName := pathSuffix(req.URL.Path, "/collections/")
 

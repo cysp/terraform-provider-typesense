@@ -65,7 +65,7 @@ func TestAccCollectionResourceDefaults(t *testing.T) {
 				Config: facetConfig,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.TestCheckResourceAttr("typesense_collection.test", "fields.0.facet", "true"),
@@ -74,7 +74,7 @@ func TestAccCollectionResourceDefaults(t *testing.T) {
 				Config: defaultConfig,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.TestCheckResourceAttr("typesense_collection.test", "fields.0.facet", "false"),
