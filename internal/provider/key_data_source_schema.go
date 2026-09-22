@@ -7,39 +7,40 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func (model *KeyModel) DataSourceSchema(ctx context.Context) schema.Schema {
+func (model *KeyDataSourceModel) DataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		Attributes: model.DataSourceSchemaAttributes(ctx),
+		MarkdownDescription: "Retrieves metadata for a Typesense API key by its id. This lookup does not return the key secret.",
+		Attributes:          model.DataSourceSchemaAttributes(ctx),
 	}
 }
 
-func (*KeyModel) DataSourceSchemaAttributes(_ context.Context) map[string]schema.Attribute {
+func (*KeyDataSourceModel) DataSourceSchemaAttributes(_ context.Context) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.Int64Attribute{
-			Required: true,
+			MarkdownDescription: "Identifier of the existing key to retrieve. Missing keys produce an error.",
+			Required:            true,
 		},
 		"description": schema.StringAttribute{
-			Computed: true,
+			MarkdownDescription: "Description returned by Typesense.",
+			Computed:            true,
 		},
 		"actions": schema.ListAttribute{
-			ElementType: types.StringType,
-			Computed:    true,
+			MarkdownDescription: "Allowed actions returned by Typesense.",
+			ElementType:         types.StringType,
+			Computed:            true,
 		},
 		"collections": schema.ListAttribute{
-			ElementType: types.StringType,
-			Computed:    true,
+			MarkdownDescription: "Allowed collection names or patterns returned by Typesense.",
+			ElementType:         types.StringType,
+			Computed:            true,
 		},
 		"expires_at": schema.Int64Attribute{
-			Optional: true,
-			Computed: true,
-		},
-		"value": schema.StringAttribute{
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
+			MarkdownDescription: "Key expiration as Unix seconds, returned by Typesense.",
+			Computed:            true,
 		},
 		"value_prefix": schema.StringAttribute{
-			Computed: true,
+			MarkdownDescription: "Prefix returned by the key metadata endpoint. This is not the complete key secret.",
+			Computed:            true,
 		},
 	}
 }
