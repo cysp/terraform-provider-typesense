@@ -1,1 +1,1 @@
-terraform import typesense_key.this id
+terraform import typesense_key.this 123

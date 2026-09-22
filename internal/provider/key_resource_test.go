@@ -117,6 +117,7 @@ func TestAccKeyResourceImport(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"value"},
 				ResourceName:            "typesense_key.test",
 			},
+			{ResourceName: "typesense_key.test", ImportState: true, ImportStateKind: resource.ImportBlockWithResourceIdentity},
 		},
 	})
 }
