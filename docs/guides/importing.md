@@ -38,6 +38,6 @@ terraform import typesense_key.search 123
 
 For a collection, review the plan and configure every observed field whose index you intend to retain, including fields inferred from document ingestion. Dynamic rules do not exempt their concrete fields from management. Fields missing from configuration are planned for index removal. See the [collection lifecycle guide](collection-lifecycle) for ownership and the broad `ignore_changes = [fields]` opt-out.
 
-Typesense returns a key's secret only when the key is created. Import and the `typesense_key` data source retrieve metadata, including the key prefix, but cannot recover the secret. A key created by Terraform retains its creation secret in state across refresh.
+Typesense returns the `value` field only when a key is created. Import does not populate `value`; a key created by Terraform retains its creation secret in state across refresh. Import and both key data sources use the server-provided `value_prefix` unchanged. That prefix contains the entire key for secrets of four bytes or fewer; see [API key lifecycle](keys) for details.
 
 Omit `autodelete` to adopt an imported key's existing automatic-deletion setting. Configure it explicitly only when Terraform should enforce that value; changing it replaces the key.

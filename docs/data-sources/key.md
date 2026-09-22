@@ -3,12 +3,12 @@
 page_title: "typesense_key Data Source - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  Retrieves metadata for a Typesense API key by its id. Requires the keys:get action. This lookup does not return the key secret.
+  Retrieves metadata for a Typesense API key by its id. Requires the keys:get action. Returns the server's value_prefix unchanged, but does not expose a value attribute. Short secrets can be fully visible in the prefix.
 ---
 
 # typesense_key (Data Source)
 
-Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. This lookup does not return the key secret.
+Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. Returns the server's `value_prefix` unchanged, but does not expose a `value` attribute. Short secrets can be fully visible in the prefix.
 
 ## Example Usage
 
@@ -32,6 +32,6 @@ data "typesense_key" "this" {
 - `collections` (List of String) Allowed collection names or patterns returned by Typesense.
 - `description` (String) Description returned by Typesense.
 - `expires_at` (Number) Key expiration as Unix seconds, returned by Typesense.
-- `value_prefix` (String) Prefix returned by the key metadata endpoint. This is not the complete key secret.
+- `value_prefix` (String) Prefix returned by Typesense, used unchanged. It contains up to the first four bytes of the key, so a secret of four bytes or fewer is fully visible. This attribute is not marked sensitive.
 
 

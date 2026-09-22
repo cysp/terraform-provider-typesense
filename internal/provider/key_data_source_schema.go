@@ -9,7 +9,7 @@ import (
 
 func (model *KeyDataSourceModel) DataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. This lookup does not return the key secret.",
+		MarkdownDescription: "Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. Returns the server's `value_prefix` unchanged, but does not expose a `value` attribute. Short secrets can be fully visible in the prefix.",
 		Attributes:          model.DataSourceSchemaAttributes(ctx),
 	}
 }
@@ -43,7 +43,7 @@ func (*KeyDataSourceModel) DataSourceSchemaAttributes(_ context.Context) map[str
 			Computed:            true,
 		},
 		"value_prefix": schema.StringAttribute{
-			MarkdownDescription: "Prefix returned by the key metadata endpoint. This is not the complete key secret.",
+			MarkdownDescription: "Prefix returned by Typesense, used unchanged. It contains up to the first four bytes of the key, so a secret of four bytes or fewer is fully visible. This attribute is not marked sensitive.",
 			Computed:            true,
 		},
 	}

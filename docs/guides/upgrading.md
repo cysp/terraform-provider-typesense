@@ -14,12 +14,13 @@ This guide describes the changes from provider 0.0.6. Back up Terraform state be
 The `typesense_key` data source retrieves metadata by `id`. Remove configured
 `expires_at` and `value` arguments. `expires_at` remains available as a read-only
 result. The `value` attribute has been removed. In provider 0.0.6 it echoed the
-configured secret; the key metadata endpoint does not return that secret.
+configured secret; the key metadata endpoint does not return a `value` field.
 
 Pass an existing secret directly from its original source instead of through
 this data source. The `typesense_key` **resource** still returns a key's secret
 when creating it and preserves it in state across refresh. Importing a key
-cannot recover its secret.
+does not populate `value`. The server-provided `value_prefix` is used unchanged
+and can contain an entire short key; see [API key lifecycle](keys).
 
 ## Collection lifecycle
 

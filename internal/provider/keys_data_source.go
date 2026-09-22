@@ -40,7 +40,7 @@ func (d *keysDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest,
 	attributes := (&KeyDataSourceModel{}).DataSourceSchemaAttributes(ctx)
 	attributes["id"] = schema.Int64Attribute{Computed: true, MarkdownDescription: "Identifier of the key returned by Typesense."}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lists metadata for all Typesense API keys. Requires the `keys:list` action. The bootstrap key and scoped search keys are not included. Key secrets are never returned.",
+		MarkdownDescription: "Lists metadata for all Typesense API keys. Requires the `keys:list` action. The bootstrap key and scoped search keys are not included. Returns the server's `value_prefix` unchanged, but does not expose a `value` attribute. Short secrets can be fully visible in the prefix.",
 		Attributes: map[string]schema.Attribute{
 			"keys": schema.ListNestedAttribute{
 				Computed:            true,
