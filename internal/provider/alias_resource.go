@@ -75,8 +75,7 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	retrievedAlias, err := r.providerData.client.Alias(data.Name.ValueString()).Retrieve(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Alias not found", "")
 				resp.State.RemoveResource(ctx)
@@ -127,8 +126,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	deletedAlias, err := r.providerData.client.Alias(data.Name.ValueString()).Delete(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Alias not found", "")
 
