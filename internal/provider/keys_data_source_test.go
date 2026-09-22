@@ -48,10 +48,14 @@ func TestKeysDataSource(t *testing.T) {
 		errorPattern string
 	}{
 		{name: "empty", status: http.StatusOK, body: `{"keys":[]}`, expected: knownvalue.ListExact([]knownvalue.Check{})},
-		{name: "metadata", status: http.StatusOK, body: `{"keys":[{"id":9,"description":"second","actions":["documents:search"],"collections":["posts"],"expires_at":123,"value_prefix":"seco"},{"id":3,"description":"first","actions":["keys:list"],"collections":["*"],"expires_at":456,"value_prefix":"firs","value":"must-not-be-exposed"}]}`, expected: knownvalue.ListExact([]knownvalue.Check{
-			knownvalue.ObjectExact(map[string]knownvalue.Check{"id": knownvalue.Int64Exact(3), "description": knownvalue.StringExact("first"), "actions": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("keys:list")}), "collections": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("*")}), "expires_at": knownvalue.Int64Exact(456), "value_prefix": knownvalue.StringExact("firs")}),
-			knownvalue.ObjectExact(map[string]knownvalue.Check{"id": knownvalue.Int64Exact(9), "description": knownvalue.StringExact("second"), "actions": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("documents:search")}), "collections": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("posts")}), "expires_at": knownvalue.Int64Exact(123), "value_prefix": knownvalue.StringExact("seco")}),
+		{name: "metadata", status: http.StatusOK, body: `{"keys":[{"id":9,"description":"second","actions":["documents:search"],"collections":["posts"],"expires_at":123,"autodelete":true,"value_prefix":"seco"},{"id":3,"description":"first","actions":["keys:list"],"collections":["*"],"expires_at":456,"autodelete":false,"value_prefix":"firs","value":"must-not-be-exposed"}]}`, expected: knownvalue.ListExact([]knownvalue.Check{
+			knownvalue.ObjectExact(map[string]knownvalue.Check{"id": knownvalue.Int64Exact(3), "description": knownvalue.StringExact("first"), "actions": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("keys:list")}), "collections": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("*")}), "autodelete": knownvalue.Bool(false), "expires_at": knownvalue.Int64Exact(456), "value_prefix": knownvalue.StringExact("firs")}),
+			knownvalue.ObjectExact(map[string]knownvalue.Check{"id": knownvalue.Int64Exact(9), "description": knownvalue.StringExact("second"), "actions": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("documents:search")}), "collections": knownvalue.ListExact([]knownvalue.Check{knownvalue.StringExact("posts")}), "autodelete": knownvalue.Bool(true), "expires_at": knownvalue.Int64Exact(123), "value_prefix": knownvalue.StringExact("seco")}),
 		})},
+		{name: "null key", status: http.StatusOK, body: `{"keys":[null]}`, errorPattern: "without an id"},
+		{name: "missing id", status: http.StatusOK, body: `{"keys":[{"description":"missing"}]}`, errorPattern: "without an id"},
+		{name: "missing array", status: http.StatusOK, body: `{}`, errorPattern: "missing the keys array"},
+		{name: "invalid json", status: http.StatusOK, body: `{`, errorPattern: "decode key response"},
 		{name: "forbidden", status: http.StatusForbidden, body: `{"message":"Forbidden"}`, errorPattern: "Error retrieving keys"},
 		{name: "server_error", status: http.StatusServiceUnavailable, body: `{"message":"Unavailable"}`, errorPattern: "Error retrieving keys"},
 	} {

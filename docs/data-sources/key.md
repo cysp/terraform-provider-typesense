@@ -3,12 +3,12 @@
 page_title: "typesense_key Data Source - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  Retrieves metadata for a Typesense API key by its id. This lookup does not return the key secret.
+  Retrieves metadata for a Typesense API key by its id. Requires the keys:get action. This lookup does not return the key secret.
 ---
 
 # typesense_key (Data Source)
 
-Retrieves metadata for a Typesense API key by its id. This lookup does not return the key secret.
+Retrieves metadata for a Typesense API key by its id. Requires the `keys:get` action. This lookup does not return the key secret.
 
 ## Example Usage
 
@@ -28,6 +28,7 @@ data "typesense_key" "this" {
 ### Read-Only
 
 - `actions` (List of String) Allowed actions returned by Typesense.
+- `autodelete` (Boolean) Whether Typesense automatically deletes this key after expiration during periodic cleanup.
 - `collections` (List of String) Allowed collection names or patterns returned by Typesense.
 - `description` (String) Description returned by Typesense.
 - `expires_at` (Number) Key expiration as Unix seconds, returned by Typesense.

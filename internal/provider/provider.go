@@ -105,7 +105,7 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 
 	typesenseClient := typesense.NewClient(typesense.WithAPIClient(apiClient))
 
-	dataSourceData := TypesenseProviderData{client: typesenseClient, alter: make(chan struct{}, 1)}
+	dataSourceData := TypesenseProviderData{client: typesenseClient, keys: keyAPI{client: apiClient}, alter: make(chan struct{}, 1)}
 	resp.DataSourceData = dataSourceData
 	resp.ResourceData = dataSourceData
 }

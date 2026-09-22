@@ -11,6 +11,7 @@ type KeyModel struct {
 	Description types.String   `tfsdk:"description"`
 	Actions     types.List     `tfsdk:"actions"`
 	Collections types.List     `tfsdk:"collections"`
+	Autodelete  types.Bool     `tfsdk:"autodelete"`
 	ExpiresAt   types.Int64    `tfsdk:"expires_at"`
 	Value       types.String   `tfsdk:"value"`
 	ValuePrefix types.String   `tfsdk:"value_prefix"`

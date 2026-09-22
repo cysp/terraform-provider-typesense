@@ -143,7 +143,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			model := provider.KeyModel{}
 
 			apiKey := test.apiKey
-			diags := model.ReadFromResponse(t.Context(), &apiKey)
+			diags := model.ReadFromResponse(t.Context(), &provider.KeyResponse{ApiKey: apiKey})
 
 			assert.Empty(t, diags)
 			assert.Equal(t, test.expected, model)

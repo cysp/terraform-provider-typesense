@@ -10,6 +10,7 @@ import (
 
 type TypesenseProviderData struct {
 	client *typesense.Client
+	keys   keyAPI
 	alter  chan struct{}
 }
 

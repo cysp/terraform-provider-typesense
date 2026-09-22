@@ -1,0 +1,44 @@
+---
+page_title: "API key lifecycle"
+subcategory: ""
+description: |-
+  Manage remote Typesense API keys, inspect metadata, and plan expiration and rotation.
+---
+
+# API key lifecycle
+
+Use `typesense_key` resources to create and delete API keys, `typesense_key` data sources to retrieve metadata by id, and `typesense_keys` to list metadata. The bootstrap key is configured on the server and cannot be managed or listed through this API. Locally derived scoped search keys are not remote key objects and do not appear in these lookups.
+
+## Permissions
+
+The provider credential needs `keys:create`, `keys:get` and `keys:delete` to manage keys. Listing additionally needs `keys:list`. Reading a key data source needs `keys:get`; reading the plural data source needs `keys:list`.
+
+Choose permissions for each managed key according to its consumers. Search clients normally need `documents:search` and specific collection names or regular expressions. Collection restrictions apply to collection endpoints; they do not restrict global endpoints such as key administration. A key with `keys:list` can list all API key metadata even if its `collections` matches no collections.
+
+The provider preserves the order and duplicates in `actions` and `collections`, and passes action strings through to Typesense. Consult the [Typesense API key reference](https://typesense.org/docs/30.2/api/api-keys.html) for supported actions and patterns.
+
+## Expiration and automatic deletion
+
+`expires_at` is an absolute Unix timestamp in seconds. When omitted, Typesense sets a far-future expiration. A key stops authenticating after expiration, even if its metadata still exists.
+
+Set `autodelete = true` to let the server remove expired keys during its periodic cleanup. Cleanup is asynchronous, so metadata can remain until the next cleanup cycle after expiration. When `autodelete` is omitted, new keys use the server default of false; refresh and import adopt the server's existing setting. An explicit change requires replacement because Typesense has no key update endpoint.
+
+{{tffile "examples/guides/keys/expiring.tf" }}
+
+An expired key with `autodelete = false` remains a managed remote object. Terraform does not rotate it merely because its expiration has passed. If an automatically deleted key remains in configuration, refresh detects its absence and plans to recreate it. Update its expiration or remove it from configuration; recreating a key with the same past expiration does not make it usable.
+
+## Secrets and metadata
+
+Omit `value` to have Typesense generate a secret, or configure a unique secret explicitly. Typesense returns the full secret only when creating the key. Terraform retains that secret across refresh; `sensitive` hides it in ordinary output but it remains in state and saved plans.
+
+Import cannot recover the secret. Both data sources expose metadata, including `value_prefix` and `autodelete`, and never expose a full secret. The listing is ordered by numeric key id and returns an empty list when no keys exist. A missing singular lookup produces an error.
+
+## Rotation and revocation
+
+Changes to a key's remote attributes replace it. `create_before_destroy` allows Terraform to create the replacement before deleting the old key, provided the replacement uses a different secret. Typesense rejects duplicate secrets, so an unchanged explicitly configured `value` cannot be used for overlapping replacement.
+
+For a staged application rollout, manage the old and new keys as separate resource instances. Distribute the new secret, confirm consumers have switched, then remove the old instance. `create_before_destroy` alone does not wait for external applications to adopt a new secret.
+
+{{tffile "examples/guides/keys/rotation.tf" }}
+
+Deleting a key revokes it, including any scoped search keys derived from it. Importing or looking up a key does not rotate it. See [Importing existing resources](importing) for CLI and resource-identity imports.

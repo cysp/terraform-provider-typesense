@@ -29,6 +29,7 @@ data "typesense_keys" "all" {}
 Read-Only:
 
 - `actions` (List of String) Allowed actions returned by Typesense.
+- `autodelete` (Boolean) Whether Typesense automatically deletes this key after expiration during periodic cleanup.
 - `collections` (List of String) Allowed collection names or patterns returned by Typesense.
 - `description` (String) Description returned by Typesense.
 - `expires_at` (Number) Key expiration as Unix seconds, returned by Typesense.

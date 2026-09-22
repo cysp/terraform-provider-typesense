@@ -50,7 +50,6 @@ func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateR
 	util.ImportStatePassthroughInt64ID(ctx, path.Root("id"), req, resp)
 }
 
-//nolint:dupl // Keep the framework lifecycle and resource-specific API calls explicit.
 func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data KeyModel
 
@@ -73,7 +72,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createdKey, err := r.providerData.client.Keys().Create(ctx, &keySchema)
+	createdKey, err := r.providerData.keys.create(ctx, keySchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating key", err.Error())
 
@@ -107,7 +106,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	keyID := data.ID.ValueInt64()
 
-	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Key(keyID).Retrieve)
+	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) { return r.providerData.keys.retrieve(ctx, keyID) })
 	if err != nil {
 		if typesenseNotFound(err) {
 			resp.State.RemoveResource(ctx)

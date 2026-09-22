@@ -25,6 +25,10 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 Operations default to five minutes. Set `timeouts` to override these limits. Changing a timeout does not change the Typesense object.
 {{ end }}
+{{ if eq .Name "typesense_key" -}}
+See [API key lifecycle](../guides/keys) for permissions, expiration, rotation and secret handling.
+
+{{ end -}}
 {{ .SchemaMarkdown | trimspace }}
 
 {{ if .HasImport -}}
