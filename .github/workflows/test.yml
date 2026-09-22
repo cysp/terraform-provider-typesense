@@ -46,6 +46,7 @@ jobs:
           flags: test
 
   testacc:
+    name: testacc (${{ matrix.terraform }}${{ matrix.typesense == '30.2' && ', Typesense 30.2' || '' }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
