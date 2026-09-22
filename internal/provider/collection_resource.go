@@ -79,8 +79,7 @@ func (r *collectionResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	retrievedCollection, err := r.providerData.client.Collection(data.Name.ValueString()).Retrieve(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Collection not found", "")
 				resp.State.RemoveResource(ctx)
@@ -121,8 +120,7 @@ func (r *collectionResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	deletedCollection, err := r.providerData.client.Collection(data.Name.ValueString()).Delete(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Collection not found", "")
 

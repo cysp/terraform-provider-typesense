@@ -82,8 +82,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	retrievedAPIKey, err := r.providerData.client.Key(keyID).Retrieve(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Key not found", "")
 				resp.State.RemoveResource(ctx)
@@ -125,8 +124,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	deletedAPIKey, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
 	if err != nil {
-		var httpError *typesense.HTTPError
-		if errors.As(err, &httpError) {
+		if httpError, ok := errors.AsType[*typesense.HTTPError](err); ok {
 			if httpError.Status == http.StatusNotFound {
 				resp.Diagnostics.AddWarning("Key not found", "")
 
