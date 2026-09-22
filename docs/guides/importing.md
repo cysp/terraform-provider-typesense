@@ -1,0 +1,41 @@
+---
+page_title: "Importing existing resources"
+subcategory: ""
+description: |-
+  Import collections, aliases, and key metadata with Terraform resource identities.
+---
+
+# Importing existing resources
+
+Import attaches an existing Typesense object to a Terraform resource address. Collections and aliases are identified by `name`; keys use their numeric `id`.
+
+Define the corresponding resource configuration, then add an import block:
+
+```terraform
+import {
+  to       = typesense_collection.posts
+  identity = { name = "posts" }
+}
+
+import {
+  to       = typesense_alias.current
+  identity = { name = "current_posts" }
+}
+
+import {
+  to       = typesense_key.search
+  identity = { id = 123 }
+}
+```
+
+Alternatively, use the Terraform CLI:
+
+```sh
+terraform import typesense_collection.posts posts
+terraform import typesense_alias.current current_posts
+terraform import typesense_key.search 123
+```
+
+For a collection, review the plan and configure every observed field whose index you intend to retain, including fields inferred from document ingestion. Dynamic rules do not exempt their concrete fields from management. Fields missing from configuration are planned for index removal. See the [collection lifecycle guide](collection-lifecycle) for ownership and the broad `ignore_changes = [fields]` opt-out.
+
+Typesense returns a key's secret only when the key is created. Import and the `typesense_key` data source retrieve metadata, including the key prefix, but cannot recover the secret. A key created by Terraform retains its creation secret in state across refresh.
