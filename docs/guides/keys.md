@@ -61,3 +61,52 @@ resource "typesense_key" "search" {
 ```
 
 Deleting a key revokes it, including any scoped search keys derived from it. Importing or looking up a key does not rotate it. See [Importing existing resources](importing) for CLI and resource-identity imports.
+
+## Scoped search keys
+
+Use [`generate_scoped_search_key`](../functions/generate_scoped_search_key) to derive a key with embedded search parameters from a parent key that grants only `documents:search`. Generation is local and requires no provider configuration. Managing the parent with `typesense_key` still requires a configured provider and key-management permissions.
+
+The following example assumes a `products` collection with `tenant_id`, `title` and `price` fields. Distribute the scoped key to the intended search client; keep the parent key private because it permits searches without the embedded filter.
+
+```terraform
+resource "typesense_key" "search" {
+  description = "Parent key for scoped product searches"
+  actions     = ["documents:search"]
+  collections = ["products"]
+}
+
+locals {
+  scoped_search_key = sensitive(provider::typesense::generate_scoped_search_key(
+    typesense_key.search.value,
+    {
+      filter_by      = "tenant_id:=customer_123"
+      include_fields = "title,price"
+      expires_at     = 2000000000
+    }
+  ))
+}
+```
+
+Set `params.expires_at` to an absolute Unix timestamp in seconds before the parent's expiration. The function does not check the server or renew expired keys. Change the expiration and distribute the newly generated value when renewing access. See the [Typesense scoped search key reference](https://typesense.org/docs/30.2/api/api-keys.html#generate-scoped-search-key) for supported parameters.
+
+Scoped keys have no remote id and cannot be imported, listed or individually deleted through the key API. Deleting the parent revokes all keys derived from it; removing a local expression or Terraform output does not revoke a distributed key. `autodelete` applies to the remote parent, not to locally derived keys.
+
+Pass the full parent secret as `search_key`. Imported keys have no `value`, and metadata lookups do not recover it; supply the secret separately or create a new parent. Do not substitute `value_prefix` for the full secret. The scoped-key format exposes the first four bytes of the parent secret. With a four-byte parent, a recipient can recover the entire parent and search without the embedded restrictions.
+
+Use this function for keys distributed during deployment. Generate per-session credentials in the application backend.
+
+An explicit `null` remains JSON null. To omit an optional parameter, construct the object conditionally. Keep required access restrictions outside that condition:
+
+```terraform
+variable "search_include_fields" {
+  type    = string
+  default = null
+}
+
+locals {
+  scoped_search_params = merge(
+    { filter_by = "tenant_id:=customer_123" },
+    var.search_include_fields == null ? {} : { include_fields = var.search_include_fields },
+  )
+}
+```
