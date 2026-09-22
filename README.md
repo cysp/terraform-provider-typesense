@@ -1,6 +1,6 @@
 # Terraform Provider for Typesense
 
-Manage Typesense collections, collection aliases, and API keys with Terraform.
+Manage Typesense collections, collection aliases, and API keys with Terraform. Generate scoped search keys locally with [`generate_scoped_search_key`](docs/functions/generate_scoped_search_key.md).
 
 Set `TYPESENSE_URL` to your cluster API endpoint and `TYPESENSE_API_KEY` to a key with the required permissions. For Typesense Cloud HA clusters, use the load-balanced endpoint.
 
