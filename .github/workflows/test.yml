@@ -4,11 +4,7 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "README.md"
   pull_request:
-    paths-ignore:
-      - "README.md"
 
 permissions:
   contents: read
@@ -22,41 +18,39 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: "go.mod"
-          cache: true
-      - run: go mod download
       - run: go build -v .
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version-file: .tool-versions
+          args: check
 
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: "go.mod"
-          cache: true
-      - run: go mod download
-      - run: go test -v -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
+      - run: go test -race -shuffle=on -count=1 -timeout=10m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
         timeout-minutes: 10
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: test
 
-  testacc:
-    name: testacc (${{ matrix.terraform }}${{ matrix.typesense == '30.2' && ', Typesense 30.2' || '' }})
+  testacc_matrix:
+    name: testacc (Terraform ${{ matrix.terraform }}, Typesense ${{ matrix.typesense }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         terraform:
-          - "1.14.*"
           - "1.15.*"
+          - "1.16.*"
         typesense:
-          - "28.0"
+          - "29.1"
           - "30.2"
     services:
       typesense:
@@ -73,13 +67,11 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: "go.mod"
-          cache: true
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: go mod download
-      - run: go test -v -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./internal/provider/
+      - run: go test -count=1 -parallel=1 -timeout=10m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./internal/provider/
         env:
           TF_ACC: "1"
           TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports['8108'] }}"
@@ -88,4 +80,14 @@ jobs:
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: testacc-${{ matrix.terraform }}
+          flags: testacc-${{ matrix.terraform }}-${{ matrix.typesense }}
+
+  testacc:
+    name: testacc
+    runs-on: ubuntu-latest
+    if: always()
+    needs: testacc_matrix
+    steps:
+      - env:
+          ACCEPTANCE_RESULT: ${{ needs.testacc_matrix.result }}
+        run: test "$ACCEPTANCE_RESULT" = success
