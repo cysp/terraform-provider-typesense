@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
@@ -151,7 +152,40 @@ func (model *CollectionFieldModel) validateCollectionFieldOptions() diag.Diagnos
 	diags.Append(model.validateCollectionFieldStemOptions()...)
 	diags.Append(model.validateCollectionFieldVectorOptions()...)
 
+	if option := model.ignoredFallbackFieldOption(); option != "" {
+		diags.AddError("Unsupported fallback field option", fmt.Sprintf("Typesense ignores %s on the fallback field %q.", option, ".*"))
+	}
+
 	return diags
+}
+
+// Typesense constructs the exact .* fallback using only its basic field options.
+// Reject ignored options before creating or altering a collection.
+func (model *CollectionFieldModel) ignoredFallbackFieldOption() string {
+	if model.Name.IsUnknown() || model.Name.IsNull() || model.Name.ValueString() != ".*" {
+		return ""
+	}
+
+	switch {
+	case !model.NumDim.IsUnknown() && !model.NumDim.IsNull():
+		return "num_dim"
+	case model.Store.Equal(types.BoolValue(false)):
+		return "store"
+	case model.RangeIndex.Equal(types.BoolValue(true)):
+		return "range_index"
+	case model.Stem.Equal(types.BoolValue(true)):
+		return "stem"
+	case model.StemDictionary.ValueString() != "":
+		return "stem_dictionary"
+	case !model.VecDist.IsUnknown() && !model.VecDist.IsNull():
+		return "vec_dist"
+	case !model.TokenSeparators.IsUnknown() && !model.TokenSeparators.IsNull() && len(model.TokenSeparators.Elements()) > 0:
+		return "token_separators"
+	case !model.SymbolsToIndex.IsUnknown() && !model.SymbolsToIndex.IsNull() && len(model.SymbolsToIndex.Elements()) > 0:
+		return "symbols_to_index"
+	default:
+		return ""
+	}
 }
 
 func (model *CollectionFieldModel) validateCollectionFieldIndexOptions() diag.Diagnostics {

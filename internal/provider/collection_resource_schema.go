@@ -137,14 +137,14 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						},
 					},
 					"token_separators": schema.ListAttribute{
-						MarkdownDescription: "Additional single-character token separators for this field. Defaults to an empty list, which uses collection-level tokenization when configured.",
+						MarkdownDescription: "Single-character token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
 						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
 					},
 					"symbols_to_index": schema.ListAttribute{
-						MarkdownDescription: "Additional single-character symbols to index for this field. Defaults to an empty list, which uses collection-level tokenization when configured.",
+						MarkdownDescription: "Single-character symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,

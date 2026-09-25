@@ -37,6 +37,10 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		}
 
 		name := field.Name.ValueString()
+		if option := field.ignoredFallbackFieldOption(); option != "" {
+			resp.Diagnostics.AddAttributeError(path.Root("fields").AtListIndex(index).AtName(option), "Unsupported fallback field option", "Typesense ignores this option on the exact .* fallback field.")
+		}
+
 		if names[name] {
 			resp.Diagnostics.AddAttributeError(path.Root("fields").AtListIndex(index).AtName("name"), "Duplicate field declaration", "Declare each field name only once.")
 		}

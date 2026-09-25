@@ -18,6 +18,8 @@ func TestCollectionConfigValidation(t *testing.T) {
 		{"stem on number", `[{name="score",type="int64",stem=true}]`, "Stemming is supported only"},
 		{"dictionary and disabled stem", `[{name="title",type="string",stem_dictionary="custom",stem=false}]`, "nonempty stem_dictionary requires stem"},
 		{"distance without vector", `[{name="title",type="string",vec_dist="ip"}]`, "vec_dist requires a float"},
+		{"fallback store", `[{name=".*",type="auto",optional=true,store=false}]`, "Unsupported fallback field option"},
+		{"fallback separators", `[{name=".*",type="auto",optional=true,token_separators=["-"]}]`, "Unsupported fallback field option"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

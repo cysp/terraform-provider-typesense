@@ -80,8 +80,8 @@ Optional:
 - `stem` (Boolean) Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.
 - `stem_dictionary` (String) Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.
 - `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 29.1 and 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
-- `symbols_to_index` (List of String) Additional single-character symbols to index for this field. Defaults to an empty list, which uses collection-level tokenization when configured.
-- `token_separators` (List of String) Additional single-character token separators for this field. Defaults to an empty list, which uses collection-level tokenization when configured.
+- `symbols_to_index` (List of String) Single-character symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.
+- `token_separators` (List of String) Single-character token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.
 - `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can reset ip to cosine after snapshot and restart, which appears as drift on refresh.
 
 
