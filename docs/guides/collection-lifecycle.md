@@ -17,6 +17,26 @@ Alterations can block writes while reindexing. When you need a separate cutover,
 
 Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
 
+## Field defaults and upgrades
+
+The provider gives omitted field options explicit effective values in the Terraform plan. Removing an option from configuration has the same result as never setting it: the next plan compares the Typesense field with that default. Refresh records the server's observed schema and never alters it.
+
+For `sort`, the [Typesense 29.1](https://github.com/typesense/typesense/blob/v29.1/src/field.cpp#L29-L42) and [30.2](https://github.com/typesense/typesense/blob/v30.2/src/field.cpp#L27-L40) implementations default to `true` for scalar `int32`, `int64`, `float`, and `bool`, and for `geopoint`, `geopoint[]`, and `geopolygon`; other types, including arrays and `auto`, default to `false`. Geo fields cannot use `sort = false`. The former provider default was `false` for every field. After upgrading, an existing numeric, boolean, or geo field whose omitted `sort` was recorded as `false` can therefore show an in-place field alteration. Terraform state cannot tell whether that old value came from an explicit setting or the former default. Set `sort = false` explicitly on a non-geo field to keep it, or review and apply the reindex plan to adopt the Typesense default.
+
+The newly managed options default to `store = true`, `range_index = false`, `stem = false`, an empty `stem_dictionary`, and empty field `token_separators` and `symbols_to_index` lists. A nonempty `stem_dictionary` makes omitted `stem` default to `true`; explicit `stem = false` conflicts with it. A `float[]` field with `num_dim` defaults `vec_dist` to `cosine`; `vec_dist` is unset on nonvector fields. Empty field tokenization lists use the collection-level settings when present. `range_index = true` requires a numerical field, and stemming requires a string or string array field.
+
+These defaults apply to imported collections and existing state as well as new fields. If Typesense reports a nondefault option that is absent from configuration, the next plan may drop and readd the field index to reset it. Declare the observed value explicitly to retain it. Review upgrade and import plans before applying, especially when existing fields have nondefault `store` settings: removing `store = false` or leaving it undeclared makes subsequent document writes store that field value. Index alterations can block writes.
+
+### Storage and restart behavior
+
+Typesense removes `store = false` field values before saving new documents. Changing a field from `store = true` to `false` does not erase values already stored; changing it back to `true` cannot recover values omitted from later writes. Reingest from your source if uniform stored data is required.
+
+In direct snapshot and restart tests on Typesense 29.1 and 30.2, a required `store = false` field caused documents to disappear from search after restart. An optional `store = false` field retained the documents but stopped matching searches on that field. The [upstream required-field issue](https://github.com/typesense/typesense/issues/3022) documents the former behavior. The provider allows these configurations and reports the schema Typesense returns; a matching schema does not establish search-index durability. Validate searches after restart before relying on `store = false` for indexed fields.
+
+### Typesense 29.1 vector distance persistence
+
+Typesense 29.1 can report `vec_dist = "ip"` immediately after creating or altering a vector field, then report `cosine` after snapshot and restart. Its [restart loader](https://github.com/typesense/typesense/blob/v29.1/src/collection_manager.cpp#L110-L116) parses the option name instead of its value. Typesense 30.2 retained `ip` in direct tests. Refresh records the actual server value, so a 29.1 restart can produce another plan to restore `ip`; applying that plan does not guarantee that `ip` survives the next restart.
+
 ## Field ownership
 
 Terraform manages the complete field schema returned by Typesense. Each configured field name must be unique. Every observed field belongs in `fields` if its index is to be retained. Fields absent from configuration and differences in configured field settings are reported as drift and reconciled on apply. Removing a field from configuration removes its index, not its stored document values.

@@ -74,8 +74,15 @@ Optional:
 - `locale` (String) Locale used for tokenization. Defaults to the empty string.
 - `num_dim` (Number) Positive number of dimensions for a vector field.
 - `optional` (Boolean) Whether documents may omit this field. Defaults to false; set true for dynamic fields.
+- `range_index` (Boolean) Whether to build an index optimized for range filtering on a numerical field. Defaults to false.
 - `reference` (String) Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.
-- `sort` (Boolean) Whether this field is sortable. Defaults to false.
+- `sort` (Boolean) Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.
+- `stem` (Boolean) Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.
+- `stem_dictionary` (String) Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.
+- `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 29.1 and 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
+- `symbols_to_index` (List of String) Additional single-character symbols to index for this field. Defaults to an empty list, which uses collection-level tokenization when configured.
+- `token_separators` (List of String) Additional single-character token separators for this field. Defaults to an empty list, which uses collection-level tokenization when configured.
+- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can reset ip to cosine after snapshot and restart, which appears as drift on refresh.
 
 
 <a id="nestedatt--timeouts"></a>
