@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -90,10 +91,64 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Optional:            true,
 					},
 					"sort": schema.BoolAttribute{
-						MarkdownDescription: "Whether this field is sortable. Defaults to false.",
+						MarkdownDescription: "Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.",
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							collectionSortPlanModifier{},
+						},
+					},
+					"store": schema.BoolAttribute{
+						MarkdownDescription: "Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 29.1 and 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.",
+						Optional:            true,
+						Computed:            true,
+						Default:             booldefault.StaticBool(true),
+					},
+					"range_index": schema.BoolAttribute{
+						MarkdownDescription: "Whether to build an index optimized for range filtering on a numerical field. Defaults to false.",
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(false),
+						PlanModifiers: []planmodifier.Bool{
+							collectionRangeIndexPlanModifier{},
+						},
+					},
+					"stem": schema.BoolAttribute{
+						MarkdownDescription: "Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.",
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							collectionStemPlanModifier{},
+						},
+					},
+					"stem_dictionary": schema.StringAttribute{
+						MarkdownDescription: "Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.",
+						Optional:            true,
+						Computed:            true,
+						Default:             stringdefault.StaticString(""),
+					},
+					"vec_dist": schema.StringAttribute{
+						MarkdownDescription: "Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can reset ip to cosine after snapshot and restart, which appears as drift on refresh.",
+						Optional:            true,
+						Computed:            true,
+						Validators:          []validator.String{stringvalidator.OneOf("cosine", "ip")},
+						PlanModifiers: []planmodifier.String{
+							collectionVecDistPlanModifier{},
+						},
+					},
+					"token_separators": schema.ListAttribute{
+						MarkdownDescription: "Additional single-character token separators for this field. Defaults to an empty list, which uses collection-level tokenization when configured.",
+						ElementType:         types.StringType,
+						Optional:            true,
+						Computed:            true,
+						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
+					},
+					"symbols_to_index": schema.ListAttribute{
+						MarkdownDescription: "Additional single-character symbols to index for this field. Defaults to an empty list, which uses collection-level tokenization when configured.",
+						ElementType:         types.StringType,
+						Optional:            true,
+						Computed:            true,
+						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
 					},
 				},
 			},

@@ -13,6 +13,11 @@ func TestCollectionConfigValidation(t *testing.T) {
 	for _, test := range []struct{ name, fields, message string }{
 		{"duplicates", `[{name="title",type="string"},{name="title",type="int64"}]`, "Duplicate field declaration"},
 		{"dimensions", `[{name="vector",type="float[]",num_dim=-1}]`, "must be at least 1"},
+		{"geo sort", `[{name="location",type="geopoint",sort=false}]`, "Geo fields require sort"},
+		{"range on string", `[{name="title",type="string",range_index=true}]`, "Range indexing is supported only"},
+		{"stem on number", `[{name="score",type="int64",stem=true}]`, "Stemming is supported only"},
+		{"dictionary and disabled stem", `[{name="title",type="string",stem_dictionary="custom",stem=false}]`, "nonempty stem_dictionary requires stem"},
+		{"distance without vector", `[{name="title",type="string",vec_dist="ip"}]`, "vec_dist requires a float"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

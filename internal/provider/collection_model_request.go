@@ -20,7 +20,7 @@ func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typese
 	diags.Append(model.Fields.ElementsAs(ctx, &fields, false)...)
 
 	for _, field := range fields {
-		apiField, fieldDiags := field.ToAPIField()
+		apiField, fieldDiags := field.ToAPIField(ctx)
 		diags.Append(fieldDiags...)
 
 		collectionSchema.Fields = append(collectionSchema.Fields, apiField)
@@ -49,7 +49,7 @@ func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typese
 	return collectionSchema, diags
 }
 
-func (model *CollectionFieldModel) ToAPIField() (typesense_api.Field, diag.Diagnostics) {
+func (model *CollectionFieldModel) ToAPIField(ctx context.Context) (typesense_api.Field, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if model.NumDim.ValueInt64() > int64(int(^uint(0)>>1)) {
@@ -61,6 +61,12 @@ func (model *CollectionFieldModel) ToAPIField() (typesense_api.Field, diag.Diagn
 	apiField := typesense_api.Field{
 		Name: model.Name.ValueString(),
 		Type: model.Type.ValueString(),
+	}
+
+	diags.Append(model.validateCollectionFieldOptions()...)
+
+	if diags.HasError() {
+		return typesense_api.Field{}, diags
 	}
 
 	if !model.Facet.IsUnknown() && !model.Facet.IsNull() {
@@ -96,5 +102,97 @@ func (model *CollectionFieldModel) ToAPIField() (typesense_api.Field, diag.Diagn
 		apiField.Sort = model.Sort.ValueBoolPointer()
 	}
 
+	diags.Append(model.setAdditionalAPIFieldOptions(ctx, &apiField)...)
+
 	return apiField, diags
+}
+
+func (model *CollectionFieldModel) setAdditionalAPIFieldOptions(ctx context.Context, apiField *typesense_api.Field) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if !model.Store.IsUnknown() && !model.Store.IsNull() {
+		apiField.Store = model.Store.ValueBoolPointer()
+	}
+
+	if !model.RangeIndex.IsUnknown() && !model.RangeIndex.IsNull() {
+		apiField.RangeIndex = model.RangeIndex.ValueBoolPointer()
+	}
+
+	if !model.Stem.IsUnknown() && !model.Stem.IsNull() {
+		apiField.Stem = model.Stem.ValueBoolPointer()
+	}
+
+	if !model.StemDictionary.IsUnknown() && !model.StemDictionary.IsNull() {
+		apiField.StemDictionary = model.StemDictionary.ValueStringPointer()
+	}
+
+	if !model.VecDist.IsUnknown() && !model.VecDist.IsNull() {
+		apiField.VecDist = model.VecDist.ValueStringPointer()
+	}
+
+	if !model.TokenSeparators.IsUnknown() && !model.TokenSeparators.IsNull() {
+		var separators []string
+		diags.Append(model.TokenSeparators.ElementsAs(ctx, &separators, false)...)
+		apiField.TokenSeparators = &separators
+	}
+
+	if !model.SymbolsToIndex.IsUnknown() && !model.SymbolsToIndex.IsNull() {
+		var symbols []string
+		diags.Append(model.SymbolsToIndex.ElementsAs(ctx, &symbols, false)...)
+		apiField.SymbolsToIndex = &symbols
+	}
+
+	return diags
+}
+
+func (model *CollectionFieldModel) validateCollectionFieldOptions() diag.Diagnostics {
+	var diags diag.Diagnostics
+	diags.Append(model.validateCollectionFieldIndexOptions()...)
+	diags.Append(model.validateCollectionFieldStemOptions()...)
+	diags.Append(model.validateCollectionFieldVectorOptions()...)
+
+	return diags
+}
+
+func (model *CollectionFieldModel) validateCollectionFieldIndexOptions() diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	name, fieldType := model.Name.ValueString(), model.Type.ValueString()
+	if !model.Sort.IsUnknown() && !model.Sort.IsNull() && !model.Sort.ValueBool() && collectionFieldIsGeo(fieldType) {
+		diags.AddError("Invalid field sort", fmt.Sprintf("Geo field %q requires sort = true for Typesense GeoSearch.", name))
+	}
+
+	if !model.RangeIndex.IsUnknown() && !model.RangeIndex.IsNull() && model.RangeIndex.ValueBool() && !collectionFieldIsNumeric(fieldType) {
+		diags.AddError("Invalid field range_index", fmt.Sprintf("Field %q must be numerical to use range_index = true.", name))
+	}
+
+	return diags
+}
+
+func (model *CollectionFieldModel) validateCollectionFieldStemOptions() diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	name, fieldType := model.Name.ValueString(), model.Type.ValueString()
+	if !model.Stem.IsUnknown() && !model.Stem.IsNull() && model.Stem.ValueBool() && !collectionFieldIsString(fieldType) {
+		diags.AddError("Invalid field stem", fmt.Sprintf("Field %q must be string or string[] to enable stemming.", name))
+	}
+
+	if !model.StemDictionary.IsUnknown() && !model.StemDictionary.IsNull() && model.StemDictionary.ValueString() != "" &&
+		!model.Stem.IsUnknown() && !model.Stem.IsNull() && !model.Stem.ValueBool() {
+		diags.AddError("Conflicting stemming settings", fmt.Sprintf("Field %q cannot set stem = false with a nonempty stem_dictionary.", name))
+	}
+
+	return diags
+}
+
+func (model *CollectionFieldModel) validateCollectionFieldVectorOptions() diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	name, fieldType := model.Name.ValueString(), model.Type.ValueString()
+	if !model.VecDist.IsUnknown() && !model.VecDist.IsNull() &&
+		(fieldType != "float[]" || model.NumDim.IsNull() || model.NumDim.IsUnknown()) {
+		diags.AddError("Invalid field vec_dist", fmt.Sprintf("Field %q must be a float[] vector with num_dim to set vec_dist.", name))
+	}
+
+	return diags
 }
