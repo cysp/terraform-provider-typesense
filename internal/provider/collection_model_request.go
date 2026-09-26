@@ -152,6 +152,19 @@ func (model *CollectionFieldModel) validateCollectionFieldOptions() diag.Diagnos
 	diags.Append(model.validateCollectionFieldStemOptions()...)
 	diags.Append(model.validateCollectionFieldVectorOptions()...)
 
+	if model.Name.Equal(types.StringValue(".*")) {
+		switch {
+		case model.Optional.Equal(types.BoolValue(false)):
+			diags.AddError("Invalid fallback field option", "Typesense requires the exact .* fallback field to be optional.")
+		case model.Facet.Equal(types.BoolValue(true)):
+			diags.AddError("Invalid fallback field option", "Typesense does not allow faceting on the exact .* fallback field.")
+		case model.Index.Equal(types.BoolValue(false)):
+			diags.AddError("Invalid fallback field option", "Typesense requires the exact .* fallback field to be indexed.")
+		case !model.Reference.IsUnknown() && !model.Reference.IsNull() && model.Reference.ValueString() != "":
+			diags.AddError("Invalid fallback field option", "Typesense does not allow a reference on the exact .* fallback field.")
+		}
+	}
+
 	if option := model.ignoredFallbackFieldOption(); option != "" {
 		diags.AddError("Unsupported fallback field option", fmt.Sprintf("Typesense ignores %s on the fallback field %q.", option, ".*"))
 	}

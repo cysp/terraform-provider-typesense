@@ -30,6 +30,32 @@ func collectionFieldIsString(fieldType string) bool {
 	return fieldType == "string" || fieldType == "string[]"
 }
 
+type collectionOptionalPlanModifier struct{}
+
+func (collectionOptionalPlanModifier) Description(context.Context) string {
+	return "Defaults to true for dynamic fields and false for other fields"
+}
+
+func (m collectionOptionalPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (collectionOptionalPlanModifier) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if !req.ConfigValue.IsNull() {
+		return
+	}
+
+	var name, fieldType types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("name"), &name)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("type"), &fieldType)...)
+
+	if resp.Diagnostics.HasError() || name.IsUnknown() || name.IsNull() || fieldType.IsUnknown() || fieldType.IsNull() {
+		return
+	}
+
+	resp.PlanValue = types.BoolValue(isCollectionDynamicField(api.Field{Name: name.ValueString(), Type: fieldType.ValueString()}))
+}
+
 type collectionSortPlanModifier struct{}
 
 func (collectionSortPlanModifier) Description(context.Context) string {

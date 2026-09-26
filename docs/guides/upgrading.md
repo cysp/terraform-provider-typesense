@@ -32,6 +32,8 @@ To retain those indexes, declare every field you intend to keep with its observe
 
 If you apply the removals, stored document values survive, but the affected fields stop being searchable until they are indexed again. Remaining dynamic rules can rediscover them on subsequent document writes, producing further drift; existing documents are not automatically rewritten.
 
+Omitted `optional` now resolves to `true` for dynamic declarations, matching the Typesense default. An older dynamic field recorded as `optional = false` can therefore plan an alteration; declare `false` explicitly only where Typesense accepts and you intend it. Changing an existing exact `.*` fallback requires removing it in one apply and adding its new declaration in another; Typesense rejects a one-request replacement.
+
 Typesense 29.1 rejects adding or modifying reference fields on an existing collection. Use a new collection or upgrade Typesense to 30.2 for those changes. The provider does not automatically replace the collection in response to this API rejection.
 
 ## Supported versions and state

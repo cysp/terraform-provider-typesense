@@ -47,6 +47,7 @@ func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequ
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	resp.Diagnostics.Append(validatePlannedFallbackFieldConfig(ctx, req.Config, data.Fields)...)
+	resp.Diagnostics.Append(warnPlannedFieldTokenOverrides(ctx, data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -154,6 +155,8 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 
 		return
 	}
+
+	resp.Diagnostics.Append(warnPlannedFieldTokenOverrides(ctx, data)...)
 
 	// Typesense permits one schema alteration per cluster. Coordinate resources
 	// sharing this provider configuration, while honoring the operation deadline.

@@ -83,7 +83,7 @@ func normalizeCollectionField(field api.Field) api.Field {
 	}
 
 	if field.Optional == nil {
-		field.Optional = new(false)
+		field.Optional = new(isCollectionDynamicField(field))
 	}
 
 	if field.Sort == nil {
@@ -148,6 +148,12 @@ func (model *CollectionModel) readCollection(ctx context.Context, response *api.
 
 func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {
 	previous := current.Fields
+	oldFallback := slices.IndexFunc(previous, func(field api.Field) bool { return field.Name == ".*" })
+	newFallback := slices.IndexFunc(desired, func(field api.Field) bool { return field.Name == ".*" })
+
+	if oldFallback >= 0 && newFallback >= 0 && !sameCollectionField(previous[oldFallback], desired[newFallback]) {
+		return nil, fmt.Errorf("%w. No alteration was sent. Remove the fallback in one apply, then add its desired declaration in a second apply, or use a new collection and alias cutover", errCollectionFallbackReplacement)
+	}
 
 	removed, err := collectionFieldsToDrop(current, desired)
 	if err != nil {
@@ -225,24 +231,44 @@ func collectionFieldsToDrop(current *api.CollectionResponse, desired []api.Field
 	return removed, nil
 }
 
-var errCollectionDynamicDrop = errors.New("cannot safely remove or reindex dynamic field")
+var (
+	errCollectionDynamicDrop         = errors.New("cannot safely remove or reindex dynamic field")
+	errCollectionFallbackReplacement = errors.New("typesense cannot replace an existing .* fallback in one schema alteration")
+)
 
 func validateCollectionDynamicDrops(previous []api.Field, removedNames map[string]bool) error {
-	// Names are opaque. A dynamic drop may remove any retained concrete field;
-	// reject that uncertainty instead of interpreting Typesense's regex dialect.
+	// Preserve retained concrete fields unless a simple prefix proves disjointness.
+	// Other patterns are opaque because Typesense uses a different regex dialect.
 	for _, old := range previous {
 		if !removedNames[old.Name] || old.Name == ".*" || !isCollectionDynamicField(old) {
 			continue
 		}
 
 		for _, retained := range previous {
-			if !isCollectionDynamicField(retained) && !removedNames[retained.Name] {
+			if !isCollectionDynamicField(retained) && !removedNames[retained.Name] && !collectionDynamicRuleCannotMatch(old.Name, retained.Name) {
 				return fmt.Errorf("%w %q while retaining concrete field %q. No schema alteration was sent. Remove the dynamic rule and existing concrete fields in a separate apply before adding the desired schema, or use a new collection and an alias cutover", errCollectionDynamicDrop, old.Name, retained.Name)
 			}
 		}
 	}
 
 	return nil
+}
+
+// A literal ASCII prefix followed by .* cannot match a field outside that prefix.
+// Keep every other pattern opaque: Typesense uses C++ std::regex, not Go regexp.
+func collectionDynamicRuleCannotMatch(pattern, name string) bool {
+	prefix, ok := strings.CutSuffix(pattern, ".*")
+	if !ok || prefix == "" {
+		return false
+	}
+
+	for _, char := range prefix {
+		if char != '_' && (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') {
+			return false
+		}
+	}
+
+	return !strings.HasPrefix(name, prefix)
 }
 
 func isCollectionDynamicField(field api.Field) bool {

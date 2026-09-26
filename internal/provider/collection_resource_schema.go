@@ -81,10 +81,12 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Optional:            true,
 					},
 					"optional": schema.BoolAttribute{
-						MarkdownDescription: "Whether documents may omit this field. Defaults to false; set true for dynamic fields.",
+						MarkdownDescription: "Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(false),
+						PlanModifiers: []planmodifier.Bool{
+							collectionOptionalPlanModifier{},
+						},
 					},
 					"reference": schema.StringAttribute{
 						MarkdownDescription: "Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.",

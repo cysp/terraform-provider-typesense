@@ -73,7 +73,7 @@ Optional:
 - `infix` (Boolean) Whether to enable infix searching. Defaults to false.
 - `locale` (String) Locale used for tokenization. Defaults to the empty string.
 - `num_dim` (Number) Positive number of dimensions for a vector field.
-- `optional` (Boolean) Whether documents may omit this field. Defaults to false; set true for dynamic fields.
+- `optional` (Boolean) Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields.
 - `range_index` (Boolean) Whether to build an index optimized for range filtering on a numerical field. Defaults to false.
 - `reference` (String) Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.
 - `sort` (Boolean) Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.

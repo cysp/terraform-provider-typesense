@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -73,8 +74,22 @@ func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path
 		{"token_separators", field.TokenSeparators},
 		{"symbols_to_index", field.SymbolsToIndex},
 	} {
-		if !option.value.IsNull() {
+		if !option.value.IsNull() && !option.value.IsUnknown() {
 			diags.AddAttributeError(fieldPath.AtName(option.name), "Unsupported fallback field option", "Typesense ignores this option on the exact .* fallback field. Remove it from this field's configuration.")
+		}
+	}
+
+	for _, option := range []struct {
+		name    string
+		invalid bool
+	}{
+		{"optional", !field.Optional.IsNull() && !field.Optional.IsUnknown() && !field.Optional.ValueBool()},
+		{"facet", !field.Facet.IsNull() && !field.Facet.IsUnknown() && field.Facet.ValueBool()},
+		{"index", !field.Index.IsNull() && !field.Index.IsUnknown() && !field.Index.ValueBool()},
+		{"reference", !field.Reference.IsNull() && !field.Reference.IsUnknown() && field.Reference.ValueString() != ""},
+	} {
+		if option.invalid {
+			diags.AddAttributeError(fieldPath.AtName(option.name), "Invalid fallback field option", "Typesense requires the exact .* fallback field to be optional and indexed, and does not allow faceting or references on it.")
 		}
 	}
 }
@@ -92,13 +107,62 @@ func warnFieldTokenOverrides(field CollectionFieldModel, fieldPath path.Path, co
 		{"token_separators", collectionSeparators, field.TokenSeparators},
 		{"symbols_to_index", collectionSymbols, field.SymbolsToIndex},
 	} {
-		if option.collection.IsNull() || option.collection.IsUnknown() || len(option.collection.Elements()) == 0 ||
-			option.field.IsNull() || option.field.IsUnknown() || len(option.field.Elements()) == 0 {
+		if !fieldTokenListDropsCollectionValues(option.collection, option.field) {
 			continue
 		}
 
 		diags.AddAttributeWarning(fieldPath.AtName(option.name), "Field tokenization overrides collection setting", "The field-level "+option.name+" list replaces the collection-level list for this field. Include any collection-level characters you also want in the field list.")
 	}
+}
+
+func fieldTokenListDropsCollectionValues(collection, field types.List) bool {
+	if collection.IsNull() || collection.IsUnknown() || field.IsNull() || field.IsUnknown() ||
+		len(collection.Elements()) == 0 || len(field.Elements()) == 0 {
+		return false
+	}
+
+	for _, value := range collection.Elements() {
+		if value.IsUnknown() {
+			return false
+		}
+	}
+
+	for _, value := range field.Elements() {
+		if value.IsUnknown() {
+			return false
+		}
+	}
+
+	for _, value := range collection.Elements() {
+		if !slices.ContainsFunc(field.Elements(), value.Equal) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Config validation cannot warn about values that are unknown until apply.
+func warnPlannedFieldTokenOverrides(ctx context.Context, planned CollectionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
+		return diags
+	}
+
+	var fields []CollectionFieldModel
+	diags.Append(planned.Fields.ElementsAs(ctx, &fields, false)...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	for index, field := range fields {
+		if !field.Name.IsNull() && !field.Name.IsUnknown() {
+			warnFieldTokenOverrides(field, path.Root("fields").AtListIndex(index), planned.TokenSeparators, planned.SymbolsToIndex, &diags)
+		}
+	}
+
+	return diags
 }
 
 // A configured field name may become known only after configuration validation.
