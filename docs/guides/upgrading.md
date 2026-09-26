@@ -40,6 +40,6 @@ This provider release targets Typesense 30.2. Upgrade a Typesense 29.1 server be
 
 ## Supported versions and state
 
-The tested matrix is Terraform 1.15/1.16 with Typesense 30.2. Typesense 29.1 and earlier are no longer supported by this provider release. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
+The required acceptance matrix is Terraform 1.15/1.16 with Typesense 29.1/30.2. Typesense 29.1 is retained for compatibility testing, but 30.2 is the supported server target; passing tests do not establish 29.1 support. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
 
 Existing state gains resource identity metadata on refresh; resource addresses remain unchanged. Optional `timeouts` settings control operation deadlines. Changing them does not rotate keys or replace collections. See each resource's reference page for timeout defaults.

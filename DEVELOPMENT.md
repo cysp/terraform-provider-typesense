@@ -47,7 +47,7 @@ TF_ACC=1 TYPESENSE_URL=http://127.0.0.1:8108 TYPESENSE_API_KEY=local-test \
   go test -count=1 -parallel=1 -timeout=10m ./internal/provider/
 ```
 
-CI runs Terraform 1.15 and 1.16 with Typesense 30.2. Set `TF_ACC_TERRAFORM_PATH` to test a specific Terraform binary locally.
+CI runs every combination of Terraform 1.15/1.16 and Typesense 29.1/30.2. The required `testacc` aggregate covers all four combinations. The provider release targets Typesense 30.2; passing tests on 29.1 provide compatibility coverage without establishing 29.1 support. Set `TF_ACC_TERRAFORM_PATH` to test a specific Terraform binary locally.
 
 ## Required checks
 
