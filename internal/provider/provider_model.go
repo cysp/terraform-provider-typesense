@@ -14,7 +14,7 @@ type TypesenseModel struct {
 
 func (m *TypesenseModel) Schema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manage Typesense collections, aliases, and API keys. Tested with Terraform 1.15/1.16 and Typesense 29.1/30.2.",
+		MarkdownDescription: "Manage Typesense collections, aliases, and API keys. Targets Typesense 30.2; CI also tests 29.1 compatibility with Terraform 1.15 and 1.16.",
 		Attributes:          m.SchemaAttributes(ctx),
 	}
 }

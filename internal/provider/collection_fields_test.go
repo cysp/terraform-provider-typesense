@@ -3,6 +3,8 @@ package provider //nolint:testpackage // Test private reconciliation helpers.
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -35,6 +37,65 @@ func TestCollectionFieldOrdering(t *testing.T) {
 			require.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+func TestCollectionFallbackReplacementRequiresSeparateAlterations(t *testing.T) {
+	t.Parallel()
+
+	current := &api.CollectionResponse{Fields: []api.Field{{Name: ".*", Type: "auto", Optional: new(true)}}}
+	changes, err := collectionFieldChanges(current, []api.Field{{Name: ".*", Type: "string", Optional: new(true)}})
+	require.ErrorContains(t, err, "cannot replace an existing .* fallback")
+	require.Empty(t, changes)
+}
+
+func TestCollectionDynamicRuleDropDisjointPrefix(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name, pattern, fieldType, retained string
+		blocked                            bool
+	}{
+		{"disjoint literal prefix", "meta_.*", "string", "title", false},
+		{"matching literal prefix", "meta_.*", "string", "meta_title", true},
+		{"regex alternation", "(meta_|title).*", "string", "title", true},
+		{"named auto regex", "a.b", "auto", "title", true},
+		{"named auto literal", "score", "auto", "title", false},
+		{"named auto dotted descendant", "person", "auto", "person.title", true},
+		{"named auto sibling prefix", "person", "auto", "personality", false},
+		{"catchall", ".*", "auto", "title", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			current := &api.CollectionResponse{Fields: []api.Field{{Name: test.pattern, Type: test.fieldType, Optional: new(true)}, {Name: test.retained, Type: "string"}}}
+			changes, err := collectionFieldChanges(current, []api.Field{{Name: test.retained, Type: "string"}})
+
+			if test.blocked {
+				require.ErrorIs(t, err, errCollectionDynamicDrop)
+				require.Empty(t, changes)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, []api.Field{{Name: test.pattern, Drop: new(true)}}, changes)
+			}
+		})
+	}
+}
+
+func TestFieldTokenListDropsCollectionValues(t *testing.T) {
+	t.Parallel()
+
+	list := func(values ...string) types.List {
+		elements := make([]attr.Value, len(values))
+		for i, value := range values {
+			elements[i] = types.StringValue(value)
+		}
+
+		return types.ListValueMust(types.StringType, elements)
+	}
+
+	require.False(t, fieldTokenListDropsCollectionValues(list("-"), list("-")))
+	require.False(t, fieldTokenListDropsCollectionValues(list("-"), list("-", "+")))
+	require.True(t, fieldTokenListDropsCollectionValues(list("-", "+"), list("-")))
 }
 
 func TestCollectionAlterationBoundary(t *testing.T) {

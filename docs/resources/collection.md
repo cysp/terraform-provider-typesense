@@ -49,9 +49,9 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 - `default_sorting_field` (String) Default sorting field returned by Typesense when omitted. Explicit changes require collection replacement.
 - `enable_nested_fields` (Boolean) Whether nested object fields are enabled. Explicit changes require collection replacement.
-- `symbols_to_index` (List of String) Symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.
+- `symbols_to_index` (List of String) Single-byte symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
-- `token_separators` (List of String) Additional token separators. Omission uses the API value. Explicit changes require collection replacement.
+- `token_separators` (List of String) Additional single-byte token separators. Omission uses the API value. Explicit changes require collection replacement.
 
 ### Read-Only
 
@@ -63,7 +63,7 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 Required:
 
-- `name` (String) Field name or dynamic pattern. Names in configuration must be unique.
+- `name` (String) Field name or dynamic pattern. Do not declare the reserved `id` field; Typesense manages it automatically and omits it from collection schemas. A named `auto` or `string*` declaration may share its name with one concrete field; other duplicate names are invalid.
 - `type` (String) Typesense field type, for example string, int64, object, auto, or an array type.
 
 Optional:
@@ -73,9 +73,16 @@ Optional:
 - `infix` (Boolean) Whether to enable infix searching. Defaults to false.
 - `locale` (String) Locale used for tokenization. Defaults to the empty string.
 - `num_dim` (Number) Positive number of dimensions for a vector field.
-- `optional` (Boolean) Whether documents may omit this field. Defaults to false; set true for dynamic fields.
-- `reference` (String) Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.
-- `sort` (Boolean) Whether this field is sortable. Defaults to false.
+- `optional` (Boolean) Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields. Non-nested dynamic fields require true; with nested fields enabled, object/object[] fields and dotted names without .* may set false.
+- `range_index` (Boolean) Whether to build an index optimized for range filtering on a numerical field. Defaults to false.
+- `reference` (String) Referenced collection and field for joins. Omit for a field without a reference; an explicit empty string is invalid.
+- `sort` (Boolean) Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Only these types and scalar string can set true; geo fields other than the exact `.*` fallback cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.
+- `stem` (Boolean) Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.
+- `stem_dictionary` (String) Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.
+- `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
+- `symbols_to_index` (List of String) Single-byte symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.
+- `token_separators` (List of String) Single-byte token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.
+- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can report cosine after snapshot and restart for a field created with ip; see the collection lifecycle guide.
 
 
 <a id="nestedatt--timeouts"></a>

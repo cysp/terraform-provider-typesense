@@ -18,14 +18,21 @@ type CollectionModel struct {
 }
 
 type CollectionFieldModel struct {
-	Name      types.String `tfsdk:"name"`
-	Type      types.String `tfsdk:"type"`
-	Facet     types.Bool   `tfsdk:"facet"`
-	Index     types.Bool   `tfsdk:"index"`
-	Infix     types.Bool   `tfsdk:"infix"`
-	Locale    types.String `tfsdk:"locale"`
-	NumDim    types.Int64  `tfsdk:"num_dim"`
-	Optional  types.Bool   `tfsdk:"optional"`
-	Reference types.String `tfsdk:"reference"`
-	Sort      types.Bool   `tfsdk:"sort"`
+	Name            types.String `tfsdk:"name"`
+	Type            types.String `tfsdk:"type"`
+	Facet           types.Bool   `tfsdk:"facet"`
+	Index           types.Bool   `tfsdk:"index"`
+	Infix           types.Bool   `tfsdk:"infix"`
+	Locale          types.String `tfsdk:"locale"`
+	NumDim          types.Int64  `tfsdk:"num_dim"`
+	Optional        types.Bool   `tfsdk:"optional"`
+	Reference       types.String `tfsdk:"reference"`
+	Sort            types.Bool   `tfsdk:"sort"`
+	Store           types.Bool   `tfsdk:"store"`
+	RangeIndex      types.Bool   `tfsdk:"range_index"`
+	Stem            types.Bool   `tfsdk:"stem"`
+	StemDictionary  types.String `tfsdk:"stem_dictionary"`
+	VecDist         types.String `tfsdk:"vec_dist"`
+	TokenSeparators types.List   `tfsdk:"token_separators"`
+	SymbolsToIndex  types.List   `tfsdk:"symbols_to_index"`
 }

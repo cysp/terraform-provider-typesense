@@ -15,11 +15,33 @@ Removing a field removes its schema and index entry. Values already stored in do
 
 Alterations can block writes while reindexing. When you need a separate cutover, create a collection with a new name, populate it, then update a `typesense_alias` to point to it. Populate and validate the documents using your application or migration tooling.
 
-Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
+Typesense 30.2 supports adding and modifying reference fields on existing collections.
+
+## Field defaults and upgrades
+
+The provider gives omitted field options explicit effective values in the Terraform plan. Removing an option from configuration has the same result as never setting it: the next plan compares the Typesense field with that default. Refresh records the server's observed schema and never alters it. Omitted `optional` defaults to `true` for `.*`, other patterns containing `.*`, and fields typed `auto` or `string*`; ordinary fields default to `false`. Typesense requires the exact `.*` fallback and other non-nested dynamic fields to be optional. With `enable_nested_fields = true`, dynamic `object`/`object[]` fields and dotted names without `.*` are nested and may explicitly set `optional = false`. The provider validates this before sending a schema change.
+
+For `sort`, the [Typesense 30.2 implementation](https://github.com/typesense/typesense/blob/v30.2/src/field.cpp#L27-L40) defaults to `true` for scalar `int32`, `int64`, `float`, and `bool`, and for `geopoint`, `geopoint[]`, and `geopolygon`; other types, including arrays and `auto`, default to `false`. Explicit `sort = true` is supported for these default-sortable types and scalar `string`; geo fields other than the exact `.*` fallback cannot use `sort = false`. The former provider default was `false` for every field. After upgrading, an existing scalar numeric or boolean field whose omitted `sort` was recorded as `false` can therefore show an in-place field alteration. Terraform state cannot tell whether that old value came from an explicit setting or the former default. Set `sort = false` explicitly where Typesense permits it to keep it, or review and apply the reindex plan to adopt the Typesense default.
+
+The newly managed options default to `store = true`, `range_index = false`, `stem = false`, an empty `stem_dictionary`, and empty field `token_separators` and `symbols_to_index` lists. A nonempty `stem_dictionary` makes omitted `stem` default to `true`; explicit `stem = false` conflicts with it. A `float[]` field with `num_dim` defaults `vec_dist` to `cosine`; `vec_dist` is unset on nonvector fields. Empty field tokenization lists inherit the collection-level settings when present; nonempty lists override them for that field. Each tokenization list entry must be exactly one UTF-8 byte. The provider warns when a field-level list omits characters from a nonempty collection-level list, so you can include any collection-level characters the field should retain. `range_index = true` requires a numerical field, and stemming requires a string or string array field. Typesense ignores these options on the exact `.*` fallback field, so the provider rejects any explicit configuration of them there, even a default value, before sending a schema change. When a computed `fields` list or element still hides its fallback options at apply, the provider rejects the change because it cannot verify what was explicitly configured. Declare the fallback directly in `fields`, or make its options known by apply.
+
+In direct snapshot and restart tests, Typesense 29.1 reported `cosine` for a vector field created with `vec_dist = "ip"`, while 30.2 continued to report `ip`. Refresh reports the resulting 29.1 schema as drift. The provider does not mask that server response.
+
+These defaults apply to imported collections and existing state as well as new fields. If Typesense reports a nondefault option that is absent from configuration, the next plan may drop and readd the field index to reset it. Declare the observed value explicitly to retain it. Review upgrade and import plans before applying, especially when existing fields have nondefault `store` settings: removing `store = false` or leaving it undeclared makes subsequent document writes store that field value. Index alterations can block writes.
+
+With `-refresh=false`, an upgrade can show an in-place plan solely because older state lacks the newly managed attributes. Apply reads the live field schema and records its effective values without altering Typesense when it already matches the plan. If the live schema matches neither the prior state nor the plan, apply stops before mutation. Unlike field options, omitted collection-level `default_sorting_field`, `enable_nested_fields`, `token_separators`, and `symbols_to_index` retain their observed API values; explicitly changing them requires collection replacement.
+
+### Storage and restart behavior
+
+Typesense removes `store = false` field values before saving new documents. Changing a field from `store = true` to `false` does not erase values already stored; changing it back to `true` cannot recover values omitted from later writes. Reingest from your source if uniform stored data is required.
+
+In direct snapshot and restart tests on Typesense 30.2, a required `store = false` field caused documents to disappear from search after restart. An optional `store = false` field retained the documents but stopped matching searches on that field. The [upstream required-field issue](https://github.com/typesense/typesense/issues/3022) documents the former behavior. The provider allows these configurations and reports the schema Typesense returns. Because the field schema remained unchanged in these tests, Terraform showed no drift even after search stopped matching. Validate searches after restart before relying on `store = false` for indexed fields.
 
 ## Field ownership
 
-Terraform manages the complete field schema returned by Typesense. Each configured field name must be unique. Every observed field belongs in `fields` if its index is to be retained. Fields absent from configuration and differences in configured field settings are reported as drift and reconciled on apply. Removing a field from configuration removes its index, not its stored document values.
+Terraform manages the complete field schema returned by Typesense. Every observed field belongs in `fields` if its index is to be retained. Fields absent from configuration and differences in configured field settings are reported as drift and reconciled on apply. Removing a field from configuration removes its index, not its stored document values.
+
+Do not declare `id` in `fields`. Typesense manages document IDs automatically and omits `id` from the collection schema it returns; the provider rejects an explicit declaration before creating or altering a collection.
 
 This includes concrete fields inferred from `auto`, `string*`, regex rules such as `meta_.*`, and nested object fields. A dynamic rule does not exempt its inferred fields from Terraform management. Document ingestion can therefore produce new drift even when the Terraform configuration has not changed.
 
@@ -37,9 +59,9 @@ In this example, a document containing an additional `score` field can cause Typ
 
 To retain an observed field, declare it with its observed settings before applying. Declaring matching settings does not itself require reindexing. Supported setting changes alter the existing field. Review the complete plan and representative searches when adopting or removing fields.
 
-A named `auto` or `string*` declaration can produce a concrete field with the same name. The resulting schema cannot be represented by unique configured names. Use concrete declarations for exact management, or ignore the entire `fields` attribute when Typesense should control inference. Migrating an existing dynamic schema may require the separate applies described below.
+A named `auto` or `string*` declaration can produce a concrete field with the same name. Declare both rows, with their observed types and settings, to retain the rule and adopt the inferred field. This is the only supported duplicate-name pair. Typesense drops both rows when altering that name, so the provider readds whichever declarations remain in configuration. Such changes reindex the concrete field; review the plan and representative searches.
 
-Field names and regex rules are passed to Typesense as opaque strings. The provider does not evaluate whether a name matches a rule. Preservation of settings outside the resource schema is limited to attributes the provider's Typesense client can read and send.
+Field names and regex rules are passed to Typesense. For alteration safety, the provider can prove that some ASCII literal names or simple ASCII prefixes followed by `.*` cannot affect a concrete field. It does not interpret other regex forms or assign inferred fields to a particular rule. Preservation of settings outside the resource schema is limited to attributes the provider's Typesense client can read and send.
 
 ### Letting another system manage fields
 
@@ -64,11 +86,13 @@ Terraform's [`ignore_changes`](https://developer.hashicorp.com/terraform/languag
 
 ## Dynamic rule alterations
 
-Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing an opaque dynamic rule when the same alteration leaves any existing concrete field untouched, before sending the alteration. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.
+Typesense cannot replace an existing exact `.*` fallback in one alteration, even when the request lists a drop before the new declaration. For an in-place update, the provider rejects that change during planning when both field values are known and convertible; it checks the live schema again before mutation. A plan that replaces the entire collection is allowed. To change the fallback in place, remove it in one apply and add the new declaration in a second. During the interval, fields without another matching rule are no longer inferred on document writes. Use a new collection and alias cutover if that interval is unacceptable.
+
+Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing a dynamic rule when the same alteration leaves a concrete field that the rule might match untouched, before sending the alteration. For the simple form `meta_.*`, it can prove that a retained field such as `title` is outside the literal `meta_` prefix and allow the change. It can also prove that a named `auto` rule `score` cannot affect `title`; a nested descendant such as `score.value` remains guarded. Other regex forms remain opaque because Typesense uses C++ regex semantics. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.
 
 Use separate applies to remove the affected schema and then add the desired declarations, coordinating writers so fields cannot be recreated between stages. Alternatively, use a new collection and an alias cutover. Review both stages: removing fields makes their indexes unavailable until they are restored.
 
-An alteration can also infer additional fields from stored documents. The provider requires the resulting field schema to match the plan exactly. If Typesense keeps returning additional fields, verification cannot succeed and the update can reach its timeout. The provider does not send another alteration to remove those fields automatically. Refresh, declare the fields you intend to retain, and review a new plan before applying again.
+An alteration can also infer additional fields from stored documents. The provider requires the resulting fields and their effective managed settings to match the plan; field order and API settings outside the resource schema are not compared. If Typesense keeps returning additional fields, verification cannot succeed and the update can reach its timeout. The provider does not send another alteration to remove those fields automatically. Refresh, declare the fields you intend to retain, and review a new plan before applying again.
 
 ## Nested parent fields
 
@@ -90,7 +114,7 @@ Each stage is a separate practitioner-controlled apply. The provider does not au
 
 Apply verifies that the observed managed field schema matches either the schema recorded when planning or the planned result. If it already matches the planned result, the provider sends no alteration. If it matches neither, apply stops before altering the schema. Run a new plan with refresh enabled and review its changes before applying again.
 
-This check includes fields inferred after planning, so document ingestion can make a saved plan unusable. It compares the field properties represented in Terraform; supported API properties outside the resource schema are preserved during alteration. The check and alteration are separate requests, so coordinate external schema writers as well.
+This check includes fields inferred after planning, so document ingestion can make a saved plan unusable. It compares effective values of the field properties represented in Terraform, after applying Typesense defaults, and aligns fields by name and type rather than API response order. Supported API properties outside the resource schema are preserved during alteration where the Typesense client can read and send them, but are not checked for drift. The check and alteration are separate requests, so coordinate external schema writers as well.
 
 Changing only `timeouts` does not read or alter the remote schema during the update. Normal Terraform refresh still reads the collection.
 
@@ -126,7 +150,7 @@ Before applying again:
 2. Verify the schema and representative searches.
 3. Run a new Terraform plan with refresh enabled and review it before applying. The new plan records the current schema; apply verifies it before sending the planned alteration.
 
-On Typesense 29.1 and 30.2, schema-change monitoring requires `operations/schema_changes:list`. This can be granted to a separate monitoring key; it is not required by the provider. The endpoint reports cluster-wide status regardless of the key's collection restrictions.
+On Typesense 30.2, schema-change monitoring requires `operations/schema_changes:list`. This can be granted to a separate monitoring key; it is not required by the provider. The endpoint reports cluster-wide status regardless of the key's collection restrictions.
 
 ## High availability
 

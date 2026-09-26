@@ -14,7 +14,7 @@ import (
 )
 
 // KeySchema and KeyResponse extend the SDK's key types with autodelete,
-// supported by Typesense 29.1 and 30.2 but absent from typesense-go v3.2.0.
+// supported by Typesense 30.2 but absent from typesense-go v3.2.0.
 type KeySchema struct {
 	typesense_api.ApiKeySchema
 
