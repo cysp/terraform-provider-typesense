@@ -13,15 +13,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var _ resource.ResourceWithValidateConfig = (*collectionResource)(nil)
 
+const (
+	collectionReservedIDMessage      = "Typesense manages the document id field automatically and omits it from collection schemas. Remove the id declaration from fields."
+	collectionDynamicOptionalMessage = "Typesense requires non-nested dynamic fields to set optional = true. With enable_nested_fields = true, object/object[] fields and dotted names without .* are nested and may set optional = false."
+	collectionUnknownFallbackMessage = "The fallback field was unknown during planning, so the provider cannot tell whether options ignored by Typesense were explicitly configured on the exact .* fallback. Declare the fallback directly in fields, or make its value known during planning."
+)
+
 func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var value, collectionSeparators, collectionSymbols types.List
+
+	var enableNested types.Bool
+
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("fields"), &value)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("token_separators"), &collectionSeparators)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("symbols_to_index"), &collectionSymbols)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("enable_nested_fields"), &enableNested)...)
 
 	if resp.Diagnostics.HasError() || value.IsNull() || value.IsUnknown() {
 		return
@@ -46,9 +57,7 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 
 		name := field.Name.ValueString()
 		fieldPath := path.Root("fields").AtListIndex(index)
-
-		validateFallbackFieldConfig(field, fieldPath, &resp.Diagnostics)
-		warnFieldTokenOverrides(field, fieldPath, collectionSeparators, collectionSymbols, &resp.Diagnostics)
+		validateCollectionFieldConfig(field, fieldPath, enableNested, collectionSeparators, collectionSymbols, &resp.Diagnostics)
 
 		previous := names[name]
 		if len(previous) > 1 || len(previous) == 1 && !previous[0].IsUnknown() && !field.Type.IsUnknown() &&
@@ -58,6 +67,58 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 
 		names[name] = append(previous, field.Type)
 	}
+}
+
+func validateCollectionFieldConfig(field CollectionFieldModel, fieldPath path.Path, enableNested types.Bool, collectionSeparators, collectionSymbols types.List, diags *diag.Diagnostics) {
+	name := field.Name.ValueString()
+	if name == "id" {
+		diags.AddAttributeError(fieldPath.AtName("name"), "Reserved field name", collectionReservedIDMessage)
+	}
+
+	validateFallbackFieldConfig(field, fieldPath, diags)
+
+	if name != ".*" && collectionFieldRequiredDynamic(field) {
+		canNest := collectionDynamicFieldCanNest(name, field.Type.ValueString())
+		if !canNest || (!enableNested.IsNull() && !enableNested.IsUnknown() && !enableNested.ValueBool()) {
+			diags.AddAttributeError(fieldPath.AtName("optional"), "Invalid dynamic field optional", collectionDynamicOptionalMessage)
+		}
+	}
+
+	warnFieldTokenOverrides(field, fieldPath, collectionSeparators, collectionSymbols, diags)
+}
+
+func collectionFieldRequiredDynamic(field CollectionFieldModel) bool {
+	return field.Optional.Equal(types.BoolValue(false)) && !field.Name.IsNull() && !field.Name.IsUnknown() &&
+		!field.Type.IsNull() && !field.Type.IsUnknown() &&
+		isCollectionDynamicField(api.Field{Name: field.Name.ValueString(), Type: field.Type.ValueString()})
+}
+
+func collectionDynamicFieldCanNest(name, fieldType string) bool {
+	return fieldType == "object" || fieldType == "object[]" || (strings.Contains(name, ".") && !strings.Contains(name, ".*"))
+}
+
+func validatePlannedDynamicOptional(ctx context.Context, planned CollectionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
+		return diags
+	}
+
+	var fields []CollectionFieldModel
+	diags.Append(planned.Fields.ElementsAs(ctx, &fields, false)...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	for index, field := range fields {
+		if field.Name.ValueString() != ".*" && collectionFieldRequiredDynamic(field) &&
+			(!planned.EnableNestedFields.ValueBool() || !collectionDynamicFieldCanNest(field.Name.ValueString(), field.Type.ValueString())) {
+			diags.AddAttributeError(path.Root("fields").AtListIndex(index).AtName("optional"), "Invalid dynamic field optional", collectionDynamicOptionalMessage)
+		}
+	}
+
+	return diags
 }
 
 func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path, diags *diag.Diagnostics) {
@@ -78,7 +139,7 @@ func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path
 		{"token_separators", field.TokenSeparators},
 		{"symbols_to_index", field.SymbolsToIndex},
 	} {
-		if !option.value.IsNull() && !option.value.IsUnknown() {
+		if !option.value.IsNull() {
 			diags.AddAttributeError(fieldPath.AtName(option.name), "Unsupported fallback field option", "Typesense ignores this option on the exact .* fallback field. Remove it from this field's configuration.")
 		}
 	}
@@ -240,18 +301,36 @@ func validatePlannedFallbackFieldConfig(ctx context.Context, config tfsdk.Config
 
 	diags := config.GetAttribute(ctx, path.Root("fields"), &configured)
 
-	if diags.HasError() || configured.IsNull() || configured.IsUnknown() || planned.IsNull() || planned.IsUnknown() {
+	if diags.HasError() || configured.IsNull() || planned.IsNull() || planned.IsUnknown() {
+		return diags
+	}
+
+	if configured.IsUnknown() {
+		if _, found := collectionExactFallback(planned); found {
+			diags.AddAttributeError(path.Root("fields"), "Cannot validate computed fallback fields", collectionUnknownFallbackMessage)
+		}
+
 		return diags
 	}
 
 	plannedElements := planned.Elements()
 	for index, element := range configured.Elements() {
-		if element.IsNull() || element.IsUnknown() || index >= len(plannedElements) || plannedElements[index].IsNull() || plannedElements[index].IsUnknown() {
+		if index >= len(plannedElements) || plannedElements[index].IsNull() || plannedElements[index].IsUnknown() {
 			continue
 		}
 
 		name := plannedElements[index].(types.Object).Attributes()["name"].(types.String) //nolint:forcetypeassert // The field schema guarantees these types.
 		if name.IsNull() || name.IsUnknown() || name.ValueString() != ".*" {
+			continue
+		}
+
+		if element.IsUnknown() {
+			diags.AddAttributeError(path.Root("fields").AtListIndex(index), "Cannot validate computed fallback field", collectionUnknownFallbackMessage)
+
+			continue
+		}
+
+		if element.IsNull() {
 			continue
 		}
 

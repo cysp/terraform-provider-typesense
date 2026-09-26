@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -43,7 +44,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
-						MarkdownDescription: "Field name or dynamic pattern. A named auto or string* declaration may share its name with one concrete field; other duplicate names are invalid.",
+						MarkdownDescription: "Field name or dynamic pattern. Do not declare the reserved `id` field; Typesense manages it automatically and omits it from collection schemas. A named `auto` or `string*` declaration may share its name with one concrete field; other duplicate names are invalid.",
 						Required:            true,
 					},
 					"type": schema.StringAttribute{
@@ -81,7 +82,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Optional:            true,
 					},
 					"optional": schema.BoolAttribute{
-						MarkdownDescription: "Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields.",
+						MarkdownDescription: "Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields. Non-nested dynamic fields require true; with nested fields enabled, object/object[] fields and dotted names without .* may set false.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Bool{
@@ -94,7 +95,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
 					},
 					"sort": schema.BoolAttribute{
-						MarkdownDescription: "Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.",
+						MarkdownDescription: "Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Only these types and scalar string can set true; geo fields other than the exact `.*` fallback cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Bool{
@@ -140,18 +141,20 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						},
 					},
 					"token_separators": schema.ListAttribute{
-						MarkdownDescription: "Single-character token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.",
+						MarkdownDescription: "Single-byte token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
 						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
+						Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 1))},
 					},
 					"symbols_to_index": schema.ListAttribute{
-						MarkdownDescription: "Single-character symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.",
+						MarkdownDescription: "Single-byte symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.",
 						ElementType:         types.StringType,
 						Optional:            true,
 						Computed:            true,
 						Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
+						Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 1))},
 					},
 				},
 			},
@@ -173,19 +176,21 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 			},
 		},
 		"symbols_to_index": schema.ListAttribute{
-			MarkdownDescription: "Symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.",
+			MarkdownDescription: "Single-byte symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.",
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
+			Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 1))},
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.RequiresReplaceIfConfigured(),
 			},
 		},
 		"token_separators": schema.ListAttribute{
-			MarkdownDescription: "Additional token separators. Omission uses the API value. Explicit changes require collection replacement.",
+			MarkdownDescription: "Additional single-byte token separators. Omission uses the API value. Explicit changes require collection replacement.",
 			ElementType:         types.StringType,
 			Optional:            true,
 			Computed:            true,
+			Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.LengthBetween(1, 1))},
 			PlanModifiers: []planmodifier.List{
 				listplanmodifier.RequiresReplaceIfConfigured(),
 			},

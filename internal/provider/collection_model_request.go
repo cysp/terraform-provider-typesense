@@ -172,6 +172,11 @@ func (model *CollectionFieldModel) setAdditionalAPIFieldOptions(ctx context.Cont
 
 func (model *CollectionFieldModel) validateCollectionFieldOptions() diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	if model.Name.Equal(types.StringValue("id")) {
+		diags.AddError("Reserved field name", collectionReservedIDMessage)
+	}
+
 	if model.Reference.Equal(types.StringValue("")) {
 		diags.AddError("Invalid field reference", "An explicit reference must not be empty. Omit reference when this field has no reference.")
 	}
@@ -233,8 +238,12 @@ func (model *CollectionFieldModel) validateCollectionFieldIndexOptions() diag.Di
 	var diags diag.Diagnostics
 
 	name, fieldType := model.Name.ValueString(), model.Type.ValueString()
-	if !model.Sort.IsUnknown() && !model.Sort.IsNull() && !model.Sort.ValueBool() && collectionFieldIsGeo(fieldType) {
+	if !model.Sort.IsUnknown() && !model.Sort.IsNull() && !model.Sort.ValueBool() && collectionFieldIsGeo(fieldType) && name != ".*" {
 		diags.AddError("Invalid field sort", fmt.Sprintf("Geo field %q requires sort = true for Typesense GeoSearch.", name))
+	}
+
+	if model.Sort.Equal(types.BoolValue(true)) && !collectionFieldCanSort(fieldType) {
+		diags.AddError("Invalid field sort", fmt.Sprintf("Field %q of type %q cannot set sort = true; Typesense supports sorting only on scalar string, int32, int64, float, bool, and geo fields.", name, fieldType))
 	}
 
 	if !model.RangeIndex.IsUnknown() && !model.RangeIndex.IsNull() && model.RangeIndex.ValueBool() && !collectionFieldIsNumeric(fieldType) {

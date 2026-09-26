@@ -22,6 +22,10 @@ func collectionFieldIsGeo(fieldType string) bool {
 	return slices.Contains([]string{"geopoint", "geopoint[]", "geopolygon"}, fieldType)
 }
 
+func collectionFieldCanSort(fieldType string) bool {
+	return fieldType == "string" || slices.Contains([]string{"int32", "int64", "float", "bool"}, fieldType) || collectionFieldIsGeo(fieldType)
+}
+
 func collectionFieldIsNumeric(fieldType string) bool {
 	return slices.Contains([]string{"int32", "int32[]", "int64", "int64[]", "float", "float[]"}, fieldType)
 }
@@ -79,9 +83,7 @@ func (collectionSortPlanModifier) PlanModifyBool(ctx context.Context, req planmo
 	}
 
 	if !req.ConfigValue.IsNull() {
-		if !req.ConfigValue.ValueBool() && collectionFieldIsGeo(fieldType.ValueString()) {
-			resp.Diagnostics.AddAttributeError(req.Path, "Invalid field sort", "Geo fields require sort = true for Typesense GeoSearch.")
-		}
+		validateExplicitCollectionSort(ctx, req, resp, fieldType.ValueString())
 
 		return
 	}
@@ -122,6 +124,21 @@ func (collectionSortPlanModifier) PlanModifyBool(ctx context.Context, req planmo
 	}
 
 	resp.PlanValue = types.BoolValue(dimensions.IsNull() || (!facet.IsNull() && facet.ValueBool()))
+}
+
+func validateExplicitCollectionSort(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse, fieldType string) {
+	if !req.ConfigValue.ValueBool() && collectionFieldIsGeo(fieldType) {
+		var name types.String
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("name"), &name)...)
+
+		if !name.IsUnknown() && !name.IsNull() && name.ValueString() != ".*" {
+			resp.Diagnostics.AddAttributeError(req.Path, "Invalid field sort", "Geo fields other than the exact .* fallback require sort = true for Typesense GeoSearch.")
+		}
+	}
+
+	if req.ConfigValue.ValueBool() && !collectionFieldCanSort(fieldType) {
+		resp.Diagnostics.AddAttributeError(req.Path, "Invalid field sort", "sort = true is supported only for scalar string, int32, int64, float, bool, and geo fields.")
+	}
 }
 
 type collectionStemPlanModifier struct{}

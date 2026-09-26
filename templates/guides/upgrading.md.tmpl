@@ -34,7 +34,7 @@ A named `auto` or `string*` declaration can share its name with one concrete inf
 
 If you apply the removals, stored document values survive, but the affected fields stop being searchable until they are indexed again. Remaining dynamic rules can rediscover them on subsequent document writes, producing further drift; existing documents are not automatically rewritten.
 
-Omitted `optional` now resolves to `true` for dynamic declarations, matching the Typesense default. An older dynamic field recorded as `optional = false` can therefore plan an alteration; declare `false` explicitly only where Typesense accepts and you intend it. Changing an existing exact `.*` fallback requires removing it in one apply and adding its new declaration in another; Typesense rejects a one-request replacement.
+Omitted `optional` now resolves to `true` for dynamic declarations, matching the Typesense default. An older dynamic field recorded as `optional = false` can therefore plan an alteration. Explicit `false` is valid for a dynamic nested field when `enable_nested_fields = true`: `object`/`object[]` fields and dotted names without `.*`. Non-nested dynamic fields require `true`, as does the exact `.*` fallback. Changing an existing exact fallback requires removing it in one apply and adding its new declaration in another; Typesense rejects a one-request replacement.
 
 This provider release targets Typesense 30.2. Upgrade a Typesense 29.1 server before relying on the collection alteration behavior described here.
 
