@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -25,7 +27,7 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		return
 	}
 
-	names := make(map[string]bool, len(value.Elements()))
+	names := make(map[string][]types.String, len(value.Elements()))
 	for index, element := range value.Elements() {
 		if element.IsNull() || element.IsUnknown() {
 			continue
@@ -48,11 +50,13 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		validateFallbackFieldConfig(field, fieldPath, &resp.Diagnostics)
 		warnFieldTokenOverrides(field, fieldPath, collectionSeparators, collectionSymbols, &resp.Diagnostics)
 
-		if names[name] {
-			resp.Diagnostics.AddAttributeError(fieldPath.AtName("name"), "Duplicate field declaration", "Declare each field name only once.")
+		previous := names[name]
+		if len(previous) > 1 || len(previous) == 1 && !previous[0].IsUnknown() && !field.Type.IsUnknown() &&
+			!collectionSameNamePairAllowed(name, previous[0].ValueString(), field.Type.ValueString()) {
+			resp.Diagnostics.AddAttributeError(fieldPath.AtName("name"), "Duplicate field declaration", "A field name may appear twice only for one named auto or string* declaration and one concrete field of another type.")
 		}
 
-		names[name] = true
+		names[name] = append(previous, field.Type)
 	}
 }
 
@@ -99,6 +103,14 @@ func warnFieldTokenOverrides(field CollectionFieldModel, fieldPath path.Path, co
 		return
 	}
 
+	for _, option := range fieldTokenOverrideOptions(field, collectionSeparators, collectionSymbols) {
+		addFieldTokenOverrideWarning(fieldPath.AtName(option), option, diags)
+	}
+}
+
+func fieldTokenOverrideOptions(field CollectionFieldModel, collectionSeparators, collectionSymbols types.List) []string {
+	var overrides []string
+
 	for _, option := range []struct {
 		name       string
 		collection types.List
@@ -111,8 +123,14 @@ func warnFieldTokenOverrides(field CollectionFieldModel, fieldPath path.Path, co
 			continue
 		}
 
-		diags.AddAttributeWarning(fieldPath.AtName(option.name), "Field tokenization overrides collection setting", "The field-level "+option.name+" list replaces the collection-level list for this field. Include any collection-level characters you also want in the field list.")
+		overrides = append(overrides, option.name)
 	}
+
+	return overrides
+}
+
+func addFieldTokenOverrideWarning(optionPath path.Path, option string, diags *diag.Diagnostics) {
+	diags.AddAttributeWarning(optionPath, "Field tokenization overrides collection setting", "The field-level "+option+" list replaces the collection-level list for this field. Include any collection-level characters you also want in the field list.")
 }
 
 func fieldTokenListDropsCollectionValues(collection, field types.List) bool {
@@ -142,24 +160,70 @@ func fieldTokenListDropsCollectionValues(collection, field types.List) bool {
 	return false
 }
 
-// Config validation cannot warn about values that are unknown until apply.
-func warnPlannedFieldTokenOverrides(ctx context.Context, planned CollectionModel) diag.Diagnostics {
+// A plan may contain tokenization values that were unknown in configuration.
+func collectionTokenOverridePaths(ctx context.Context, planned CollectionModel) (map[string]path.Path, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	paths := make(map[string]path.Path)
 	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
-		return diags
+		return paths, diags
 	}
 
 	var fields []CollectionFieldModel
 	diags.Append(planned.Fields.ElementsAs(ctx, &fields, false)...)
 
 	if diags.HasError() {
-		return diags
+		return paths, diags
 	}
 
 	for index, field := range fields {
-		if !field.Name.IsNull() && !field.Name.IsUnknown() {
-			warnFieldTokenOverrides(field, path.Root("fields").AtListIndex(index), planned.TokenSeparators, planned.SymbolsToIndex, &diags)
+		if field.Name.IsNull() || field.Name.IsUnknown() || field.Name.ValueString() == ".*" {
+			continue
 		}
+
+		for _, option := range fieldTokenOverrideOptions(field, planned.TokenSeparators, planned.SymbolsToIndex) {
+			paths[fmt.Sprintf("%d/%s", index, option)] = path.Root("fields").AtListIndex(index).AtName(option)
+		}
+	}
+
+	return paths, diags
+}
+
+// Configuration validation reports known overrides during planning. Report only
+// those that became known at apply, without repeating the earlier warning.
+func warnResolvedFieldTokenOverrides(ctx context.Context, config tfsdk.Config, planned CollectionModel) diag.Diagnostics {
+	if config.Schema == nil {
+		return nil
+	}
+
+	var configured CollectionModel
+
+	diags := config.Get(ctx, &configured)
+	if diags.HasError() {
+		return diags
+	}
+
+	known, knownDiags := collectionTokenOverridePaths(ctx, configured)
+	diags.Append(knownDiags...)
+
+	resolved, resolvedDiags := collectionTokenOverridePaths(ctx, planned)
+	diags.Append(resolvedDiags...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	for key, optionPath := range resolved {
+		if _, alreadyWarned := known[key]; alreadyWarned {
+			continue
+		}
+
+		option := "token_separators"
+		if strings.HasSuffix(key, "/symbols_to_index") {
+			option = "symbols_to_index"
+		}
+
+		addFieldTokenOverrideWarning(optionPath, option, &diags)
 	}
 
 	return diags

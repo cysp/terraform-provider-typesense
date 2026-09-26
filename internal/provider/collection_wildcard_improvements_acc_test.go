@@ -61,6 +61,44 @@ resource "typesense_collection" "test" {
 	}})
 }
 
+func TestAccCollectionComputedEmptyReferenceRejected(t *testing.T) {
+	t.Parallel()
+
+	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	config := fmt.Sprintf(`resource "terraform_data" "reference" {
+ input = ""
+}
+resource "typesense_collection" "test" {
+ name = %q
+ fields = [{name="title",type="string",reference=terraform_data.reference.output}]
+}`, name)
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: config, ExpectError: regexp.MustCompile("Invalid field reference|at least 1")},
+	}})
+}
+
+func TestAccCollectionComputedTokenOverride(t *testing.T) {
+	t.Parallel()
+
+	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	config := fmt.Sprintf(`resource "terraform_data" "separators" {
+ input = ["-"]
+}
+resource "typesense_collection" "test" {
+ name = %q
+ token_separators = ["-", "+"]
+ fields = [{name="title",type="string",token_separators=terraform_data.separators.output}]
+}`, name)
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: config},
+		{Config: config, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
+		}}},
+	}})
+}
+
 func TestAccCollectionFallbackReplacementIsDiagnosed(t *testing.T) {
 	t.Parallel()
 
@@ -74,7 +112,7 @@ func TestAccCollectionFallbackReplacementIsDiagnosed(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 		{Config: config("auto")},
-		{Config: config("string"), ExpectError: regexp.MustCompile("cannot replace an existing .* fallback")},
+		{Config: config("string"), PlanOnly: true, ExpectError: regexp.MustCompile("Cannot replace Typesense fallback in one update")},
 		{Config: config("auto"), ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
 		}}},
@@ -115,6 +153,89 @@ func TestAccCollectionRemoveDisjointDynamicRule(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, new(1), result.Found)
 		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
+		}}},
+	}})
+}
+
+func TestAccCollectionSameNameDynamicConcretePair(t *testing.T) {
+	t.Parallel()
+
+	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	client := typesense.NewClient(typesense.WithServer(os.Getenv("TYPESENSE_URL")), typesense.WithAPIKey(os.Getenv("TYPESENSE_API_KEY")))
+	config := func(concrete string) string {
+		return fmt.Sprintf(`resource "typesense_collection" "test" {
+ name = %q
+ fields = [{name="score",type="auto"},{name="title",type="string"}%s]
+}`, name, concrete)
+	}
+	dynamic := config("")
+	pair := config(`,{name="score",type="int64",optional=true,sort=true}`)
+	faceted := config(`,{name="score",type="int64",optional=true,sort=true,facet=true}`)
+	static := fmt.Sprintf(`resource "typesense_collection" "test" {
+ name = %q
+ fields = [{name="title",type="string"},{name="score",type="int64",optional=true,sort=true,facet=true}]
+}`, name)
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: dynamic},
+		{Config: pair, PreConfig: func() {
+			_, err := client.Collection(name).Documents().Create(context.Background(), map[string]any{"id": "one", "score": 42, "title": "Original"}, &api.DocumentIndexParameters{})
+			require.NoError(t, err)
+		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
+		}}},
+		{Config: faceted, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate),
+		}}},
+		{Config: faceted, PreConfig: func() {
+			collection, err := client.Collection(name).Retrieve(context.Background())
+			require.NoError(t, err)
+
+			var dynamicFound, concreteFound bool
+
+			for _, field := range collection.Fields {
+				if field.Name == "score" && field.Type == "auto" {
+					dynamicFound = true
+				}
+
+				if field.Name == "score" && field.Type == "int64" {
+					concreteFound = field.Facet != nil && *field.Facet
+				}
+			}
+
+			require.True(t, dynamicFound)
+			require.True(t, concreteFound)
+		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
+		}}},
+		{Config: static},
+		{Config: static, PreConfig: func() {
+			collection, err := client.Collection(name).Retrieve(context.Background())
+			require.NoError(t, err)
+			require.Len(t, collection.Fields, 2)
+
+			result, err := client.Collection(name).Documents().Search(context.Background(), &api.SearchCollectionParams{Q: new("Original"), QueryBy: new("title")})
+			require.NoError(t, err)
+			require.Equal(t, new(1), result.Found)
+		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
+		}}},
+	}})
+}
+
+func TestAccCollectionCreateSameNamePair(t *testing.T) {
+	t.Parallel()
+
+	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	config := fmt.Sprintf(`resource "typesense_collection" "test" {
+ name = %q
+ fields = [{name="score",type="int64",sort=true},{name="score",type="auto"}]
+}`, name)
+
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: config},
+		{Config: config, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 			plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop),
 		}}},
 	}})

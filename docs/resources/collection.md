@@ -63,7 +63,7 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 Required:
 
-- `name` (String) Field name or dynamic pattern. Names in configuration must be unique.
+- `name` (String) Field name or dynamic pattern. A named auto or string* declaration may share its name with one concrete field; other duplicate names are invalid.
 - `type` (String) Typesense field type, for example string, int64, object, auto, or an array type.
 
 Optional:
@@ -75,14 +75,14 @@ Optional:
 - `num_dim` (Number) Positive number of dimensions for a vector field.
 - `optional` (Boolean) Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields.
 - `range_index` (Boolean) Whether to build an index optimized for range filtering on a numerical field. Defaults to false.
-- `reference` (String) Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.
+- `reference` (String) Referenced collection and field for joins. Omit for a field without a reference; an explicit empty string is invalid.
 - `sort` (Boolean) Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.
 - `stem` (Boolean) Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.
 - `stem_dictionary` (String) Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.
-- `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 29.1 and 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
+- `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
 - `symbols_to_index` (List of String) Single-character symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.
 - `token_separators` (List of String) Single-character token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.
-- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can reset ip to cosine after snapshot and restart, which appears as drift on refresh.
+- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields.
 
 
 <a id="nestedatt--timeouts"></a>

@@ -254,11 +254,12 @@ func validateCollectionDynamicDrops(previous []api.Field, removedNames map[strin
 	return nil
 }
 
-// A literal ASCII prefix followed by .* cannot match a field outside that prefix.
-// Keep every other pattern opaque: Typesense uses C++ std::regex, not Go regexp.
+// A literal ASCII name cannot affect an unrelated concrete field. A trailing
+// .* can also affect names under its literal prefix. Keep other patterns opaque:
+// Typesense uses C++ std::regex, not Go regexp.
 func collectionDynamicRuleCannotMatch(pattern, name string) bool {
-	prefix, ok := strings.CutSuffix(pattern, ".*")
-	if !ok || prefix == "" {
+	prefix, wildcard := strings.CutSuffix(pattern, ".*")
+	if prefix == "" {
 		return false
 	}
 
@@ -268,11 +269,28 @@ func collectionDynamicRuleCannotMatch(pattern, name string) bool {
 		}
 	}
 
-	return !strings.HasPrefix(name, prefix)
+	if wildcard {
+		return !strings.HasPrefix(name, prefix)
+	}
+
+	return name != prefix && !strings.HasPrefix(name, prefix+".")
 }
 
 func isCollectionDynamicField(field api.Field) bool {
 	return strings.Contains(field.Name, ".*") || slices.Contains([]string{"auto", "string*"}, field.Type)
+}
+
+// Typesense can keep a named auto/string* declaration beside its concrete
+// expansion. The name identifies both rows when altering the collection.
+func collectionSameNamePairAllowed(name, firstType, secondType string) bool {
+	if strings.Contains(name, ".*") || firstType == secondType {
+		return false
+	}
+
+	firstDynamic := slices.Contains([]string{"auto", "string*"}, firstType)
+	secondDynamic := slices.Contains([]string{"auto", "string*"}, secondType)
+
+	return firstDynamic != secondDynamic
 }
 
 // Typesense restores original descendants when adding a nested parent. Combining

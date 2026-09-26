@@ -30,14 +30,16 @@ The provider manages every field returned by Typesense, including concrete field
 
 To retain those indexes, declare every field you intend to keep with its observed settings before applying. Dynamic rules do not exempt inferred fields from this requirement. If another system should manage fields after creation, `ignore_changes = [fields]` in the resource lifecycle opts out of all field updates, including configured changes. See the lifecycle guide for that tradeoff. Alternatively, migrate through a new collection and alias cutover.
 
+A named `auto` or `string*` declaration can share its name with one concrete inferred field. Declare both rows to retain and manage the pair; other duplicate field names remain invalid.
+
 If you apply the removals, stored document values survive, but the affected fields stop being searchable until they are indexed again. Remaining dynamic rules can rediscover them on subsequent document writes, producing further drift; existing documents are not automatically rewritten.
 
 Omitted `optional` now resolves to `true` for dynamic declarations, matching the Typesense default. An older dynamic field recorded as `optional = false` can therefore plan an alteration; declare `false` explicitly only where Typesense accepts and you intend it. Changing an existing exact `.*` fallback requires removing it in one apply and adding its new declaration in another; Typesense rejects a one-request replacement.
 
-Typesense 29.1 rejects adding or modifying reference fields on an existing collection. Use a new collection or upgrade Typesense to 30.2 for those changes. The provider does not automatically replace the collection in response to this API rejection.
+This provider release targets Typesense 30.2. Upgrade a Typesense 29.1 server before relying on the collection alteration behavior described here.
 
 ## Supported versions and state
 
-The tested matrix is Terraform 1.15/1.16 with Typesense 29.1/30.2. Terraform 1.14 and Typesense 28 are no longer tested. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
+The tested matrix is Terraform 1.15/1.16 with Typesense 30.2. Typesense 29.1 and earlier are no longer supported by this provider release. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
 
 Existing state gains resource identity metadata on refresh; resource addresses remain unchanged. Optional `timeouts` settings control operation deadlines. Changing them does not rotate keys or replace collections. See each resource's reference page for timeout defaults.

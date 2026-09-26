@@ -52,24 +52,22 @@ func TestCollectionDynamicRuleDropDisjointPrefix(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		name, pattern, retained string
-		blocked                 bool
+		name, pattern, fieldType, retained string
+		blocked                            bool
 	}{
-		{"disjoint literal prefix", "meta_.*", "title", false},
-		{"matching literal prefix", "meta_.*", "meta_title", true},
-		{"regex alternation", "(meta_|title).*", "title", true},
-		{"named auto regex", "a.b", "title", true},
-		{"catchall", ".*", "title", false},
+		{"disjoint literal prefix", "meta_.*", "string", "title", false},
+		{"matching literal prefix", "meta_.*", "string", "meta_title", true},
+		{"regex alternation", "(meta_|title).*", "string", "title", true},
+		{"named auto regex", "a.b", "auto", "title", true},
+		{"named auto literal", "score", "auto", "title", false},
+		{"named auto dotted descendant", "person", "auto", "person.title", true},
+		{"named auto sibling prefix", "person", "auto", "personality", false},
+		{"catchall", ".*", "auto", "title", false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			fieldType := "string"
-			if test.name == "named auto regex" || test.name == "catchall" {
-				fieldType = "auto"
-			}
-
-			current := &api.CollectionResponse{Fields: []api.Field{{Name: test.pattern, Type: fieldType, Optional: new(true)}, {Name: test.retained, Type: "string"}}}
+			current := &api.CollectionResponse{Fields: []api.Field{{Name: test.pattern, Type: test.fieldType, Optional: new(true)}, {Name: test.retained, Type: "string"}}}
 			changes, err := collectionFieldChanges(current, []api.Field{{Name: test.retained, Type: "string"}})
 
 			if test.blocked {

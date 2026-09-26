@@ -43,7 +43,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
-						MarkdownDescription: "Field name or dynamic pattern. Names in configuration must be unique.",
+						MarkdownDescription: "Field name or dynamic pattern. A named auto or string* declaration may share its name with one concrete field; other duplicate names are invalid.",
 						Required:            true,
 					},
 					"type": schema.StringAttribute{
@@ -89,8 +89,9 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						},
 					},
 					"reference": schema.StringAttribute{
-						MarkdownDescription: "Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.",
+						MarkdownDescription: "Referenced collection and field for joins. Omit for a field without a reference; an explicit empty string is invalid.",
 						Optional:            true,
+						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
 					},
 					"sort": schema.BoolAttribute{
 						MarkdownDescription: "Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Geo fields cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.",
@@ -101,7 +102,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						},
 					},
 					"store": schema.BoolAttribute{
-						MarkdownDescription: "Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 29.1 and 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.",
+						MarkdownDescription: "Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.",
 						Optional:            true,
 						Computed:            true,
 						Default:             booldefault.StaticBool(true),
@@ -130,7 +131,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Default:             stringdefault.StaticString(""),
 					},
 					"vec_dist": schema.StringAttribute{
-						MarkdownDescription: "Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can reset ip to cosine after snapshot and restart, which appears as drift on refresh.",
+						MarkdownDescription: "Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields.",
 						Optional:            true,
 						Computed:            true,
 						Validators:          []validator.String{stringvalidator.OneOf("cosine", "ip")},

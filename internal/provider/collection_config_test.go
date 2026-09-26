@@ -12,6 +12,10 @@ func TestCollectionConfigValidation(t *testing.T) {
 
 	for _, test := range []struct{ name, fields, message string }{
 		{"duplicates", `[{name="title",type="string"},{name="title",type="int64"}]`, "Duplicate field declaration"},
+		{"two dynamic declarations", `[{name="score",type="auto"},{name="score",type="string*"}]`, "Duplicate field declaration"},
+		{"three same-name declarations", `[{name="score",type="auto"},{name="score",type="int64"},{name="score",type="float"}]`, "Duplicate field declaration"},
+		{"same-name regex declarations", `[{name="score_.*",type="auto"},{name="score_.*",type="int64"}]`, "Duplicate field declaration"},
+		{"empty reference", `[{name="title",type="string",reference=""}]`, "at least 1"},
 		{"dimensions", `[{name="vector",type="float[]",num_dim=-1}]`, "must be at least 1"},
 		{"geo sort", `[{name="location",type="geopoint",sort=false}]`, "Geo fields require sort"},
 		{"range on string", `[{name="title",type="string",range_index=true}]`, "Range indexing is supported only"},
@@ -36,6 +40,17 @@ func TestCollectionConfigValidation(t *testing.T) {
 			}})
 		})
 	}
+}
+
+func TestCollectionSameNamePairPlan(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: providerConfig("http://127.0.0.1:1") + `resource "typesense_collection" "test" {
+ name="posts"
+ fields=[{name="score",type="auto"},{name="score",type="int64",sort=true}]
+ }`, PlanOnly: true, ExpectNonEmptyPlan: true},
+	}})
 }
 
 func TestCollectionUnknownFieldName(t *testing.T) {

@@ -50,7 +50,6 @@ jobs:
           - "1.15.*"
           - "1.16.*"
         typesense:
-          - "29.1"
           - "30.2"
     services:
       typesense:

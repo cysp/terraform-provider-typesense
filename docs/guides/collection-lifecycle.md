@@ -15,13 +15,13 @@ Removing a field removes its schema and index entry. Values already stored in do
 
 Alterations can block writes while reindexing. When you need a separate cutover, create a collection with a new name, populate it, then update a `typesense_alias` to point to it. Populate and validate the documents using your application or migration tooling.
 
-Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
+Typesense 30.2 supports adding and modifying reference fields on existing collections.
 
 ## Field defaults and upgrades
 
 The provider gives omitted field options explicit effective values in the Terraform plan. Removing an option from configuration has the same result as never setting it: the next plan compares the Typesense field with that default. Refresh records the server's observed schema and never alters it. Omitted `optional` defaults to `true` for `.*`, other patterns containing `.*`, and fields typed `auto` or `string*`; ordinary fields default to `false`. An explicit `optional = false` on `.*` is rejected before an API call because Typesense requires its fallback to be optional.
 
-For `sort`, the [Typesense 29.1](https://github.com/typesense/typesense/blob/v29.1/src/field.cpp#L29-L42) and [30.2](https://github.com/typesense/typesense/blob/v30.2/src/field.cpp#L27-L40) implementations default to `true` for scalar `int32`, `int64`, `float`, and `bool`, and for `geopoint`, `geopoint[]`, and `geopolygon`; other types, including arrays and `auto`, default to `false`. Geo fields cannot use `sort = false`. The former provider default was `false` for every field. After upgrading, an existing numeric, boolean, or geo field whose omitted `sort` was recorded as `false` can therefore show an in-place field alteration. Terraform state cannot tell whether that old value came from an explicit setting or the former default. Set `sort = false` explicitly on a non-geo field to keep it, or review and apply the reindex plan to adopt the Typesense default.
+For `sort`, the [Typesense 30.2 implementation](https://github.com/typesense/typesense/blob/v30.2/src/field.cpp#L27-L40) defaults to `true` for scalar `int32`, `int64`, `float`, and `bool`, and for `geopoint`, `geopoint[]`, and `geopolygon`; other types, including arrays and `auto`, default to `false`. Geo fields cannot use `sort = false`. The former provider default was `false` for every field. After upgrading, an existing numeric, boolean, or geo field whose omitted `sort` was recorded as `false` can therefore show an in-place field alteration. Terraform state cannot tell whether that old value came from an explicit setting or the former default. Set `sort = false` explicitly on a non-geo field to keep it, or review and apply the reindex plan to adopt the Typesense default.
 
 The newly managed options default to `store = true`, `range_index = false`, `stem = false`, an empty `stem_dictionary`, and empty field `token_separators` and `symbols_to_index` lists. A nonempty `stem_dictionary` makes omitted `stem` default to `true`; explicit `stem = false` conflicts with it. A `float[]` field with `num_dim` defaults `vec_dist` to `cosine`; `vec_dist` is unset on nonvector fields. Empty field tokenization lists inherit the collection-level settings when present; nonempty lists override them for that field. The provider warns when a field-level list omits characters from a nonempty collection-level list, so you can include any collection-level characters the field should retain. `range_index = true` requires a numerical field, and stemming requires a string or string array field. Typesense ignores these options on the exact `.*` fallback field, so the provider rejects any explicit configuration of them there, even a default value, before sending a schema change.
 
@@ -31,11 +31,7 @@ These defaults apply to imported collections and existing state as well as new f
 
 Typesense removes `store = false` field values before saving new documents. Changing a field from `store = true` to `false` does not erase values already stored; changing it back to `true` cannot recover values omitted from later writes. Reingest from your source if uniform stored data is required.
 
-In direct snapshot and restart tests on Typesense 29.1 and 30.2, a required `store = false` field caused documents to disappear from search after restart. An optional `store = false` field retained the documents but stopped matching searches on that field. The [upstream required-field issue](https://github.com/typesense/typesense/issues/3022) documents the former behavior. The provider allows these configurations and reports the schema Typesense returns; a matching schema does not establish search-index durability. Validate searches after restart before relying on `store = false` for indexed fields.
-
-### Typesense 29.1 vector distance persistence
-
-Typesense 29.1 can report `vec_dist = "ip"` immediately after creating or altering a vector field, then report `cosine` after snapshot and restart. Its [restart loader](https://github.com/typesense/typesense/blob/v29.1/src/collection_manager.cpp#L110-L116) parses the option name instead of its value. Typesense 30.2 retained `ip` in direct tests. Refresh records the actual server value, so a 29.1 restart can produce another plan to restore `ip`; applying that plan does not guarantee that `ip` survives the next restart.
+In direct snapshot and restart tests on Typesense 30.2, a required `store = false` field caused documents to disappear from search after restart. An optional `store = false` field retained the documents but stopped matching searches on that field. The [upstream required-field issue](https://github.com/typesense/typesense/issues/3022) documents the former behavior. The provider allows these configurations and reports the schema Typesense returns; a matching schema does not establish search-index durability. Validate searches after restart before relying on `store = false` for indexed fields.
 
 ## Field ownership
 
@@ -57,7 +53,7 @@ In this example, a document containing an additional `score` field can cause Typ
 
 To retain an observed field, declare it with its observed settings before applying. Declaring matching settings does not itself require reindexing. Supported setting changes alter the existing field. Review the complete plan and representative searches when adopting or removing fields.
 
-A named `auto` or `string*` declaration can produce a concrete field with the same name. The resulting schema cannot be represented by unique configured names. Use concrete declarations for exact management, or ignore the entire `fields` attribute when Typesense should control inference. Migrating an existing dynamic schema may require the separate applies described below.
+A named `auto` or `string*` declaration can produce a concrete field with the same name. Declare both rows, with their observed types and settings, to retain the rule and adopt the inferred field. This is the only supported duplicate-name pair. Typesense drops both rows when altering that name, so the provider readds whichever declarations remain in configuration. Such changes reindex the concrete field; review the plan and representative searches.
 
 Field names and regex rules are passed to Typesense as opaque strings. The provider does not evaluate whether a name matches a rule. Preservation of settings outside the resource schema is limited to attributes the provider's Typesense client can read and send.
 
@@ -84,9 +80,9 @@ Terraform's [`ignore_changes`](https://developer.hashicorp.com/terraform/languag
 
 ## Dynamic rule alterations
 
-Typesense cannot replace an existing exact `.*` fallback in one alteration, even when the request lists a drop before the new declaration. To change its type or supported settings, remove the fallback in one apply and add the new declaration in a second. During the interval, fields without another matching rule are no longer inferred on document writes. Use a new collection and alias cutover if that interval is unacceptable.
+Typesense cannot replace an existing exact `.*` fallback in one alteration, even when the request lists a drop before the new declaration. The provider rejects that change during planning and checks it again before mutation. To change its type or supported settings, remove the fallback in one apply and add the new declaration in a second. During the interval, fields without another matching rule are no longer inferred on document writes. Use a new collection and alias cutover if that interval is unacceptable.
 
-Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing a dynamic rule when the same alteration leaves a concrete field that the rule might match untouched, before sending the alteration. For the simple form `meta_.*`, it can prove that a retained field such as `title` is outside the literal `meta_` prefix and allow the change. It keeps other regex forms opaque because Typesense uses C++ regex semantics. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.
+Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing a dynamic rule when the same alteration leaves a concrete field that the rule might match untouched, before sending the alteration. For the simple form `meta_.*`, it can prove that a retained field such as `title` is outside the literal `meta_` prefix and allow the change. It can also prove that a named `auto` rule `score` cannot affect `title`; a nested descendant such as `score.value` remains guarded. Other regex forms remain opaque because Typesense uses C++ regex semantics. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.
 
 Use separate applies to remove the affected schema and then add the desired declarations, coordinating writers so fields cannot be recreated between stages. Alternatively, use a new collection and an alias cutover. Review both stages: removing fields makes their indexes unavailable until they are restored.
 
@@ -148,7 +144,7 @@ Before applying again:
 2. Verify the schema and representative searches.
 3. Run a new Terraform plan with refresh enabled and review it before applying. The new plan records the current schema; apply verifies it before sending the planned alteration.
 
-On Typesense 29.1 and 30.2, schema-change monitoring requires `operations/schema_changes:list`. This can be granted to a separate monitoring key; it is not required by the provider. The endpoint reports cluster-wide status regardless of the key's collection restrictions.
+On Typesense 30.2, schema-change monitoring requires `operations/schema_changes:list`. This can be granted to a separate monitoring key; it is not required by the provider. The endpoint reports cluster-wide status regardless of the key's collection restrictions.
 
 ## High availability
 
