@@ -132,7 +132,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Default:             stringdefault.StaticString(""),
 					},
 					"vec_dist": schema.StringAttribute{
-						MarkdownDescription: "Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields.",
+						MarkdownDescription: "Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can report cosine after snapshot and restart for a field created with ip; see the collection lifecycle guide.",
 						Optional:            true,
 						Computed:            true,
 						Validators:          []validator.String{stringvalidator.OneOf("cosine", "ip")},

@@ -26,6 +26,10 @@ and can contain an entire short key; see [API key lifecycle](keys).
 
 Field changes now update the collection in place instead of planning replacement. Review the [collection lifecycle guide](collection-lifecycle) for field ownership, write blocking, dynamic-rule and nested-parent restrictions, and recovery after interrupted operations. Existing collection field attribute names and list types are retained. Collection names and explicitly changed immutable collection settings still require replacement.
 
+Provider 0.0.6 sent and recorded `sort = false` when it was omitted, including for scalar `int32`, `int64`, `float`, and `bool` fields. Omission now resolves to the Typesense default of `true` for those types. An existing field can therefore plan an in-place index alteration even when its configuration has not changed. To retain `false` without altering the field, set `sort = false` explicitly in its declaration. Removing that setting later plans `true`. Otherwise, review and apply the alteration to adopt the Typesense default; reindexing can block writes.
+
+The provider now owns `store`, `range_index`, `stem`, `stem_dictionary`, field `token_separators` and `symbols_to_index`, and vector `vec_dist`. If an existing or imported field has a nondefault setting, omitting it from configuration plans a reset to the Typesense default. Declare the observed setting to retain it, and review any reset before applying. Changes to `store` affect later document writes; values omitted from stored documents are not restored by setting `store = true`. See the [field defaults and storage guidance](collection-lifecycle#field-defaults-and-upgrades).
+
 The provider manages every field returned by Typesense, including concrete fields inferred from document ingestion. On refresh, fields missing from configuration appear as drift. An unchanged configuration can therefore plan an in-place update that removes existing indexes, whether or not provider 0.0.6 previously recorded those fields in state.
 
 To retain those indexes, declare every field you intend to keep with its observed settings before applying. Dynamic rules do not exempt inferred fields from this requirement. If another system should manage fields after creation, `ignore_changes = [fields]` in the resource lifecycle opts out of all field updates, including configured changes. See the lifecycle guide for that tradeoff. Alternatively, migrate through a new collection and alias cutover.
@@ -40,6 +44,6 @@ This provider release targets Typesense 30.2. Upgrade a Typesense 29.1 server be
 
 ## Supported versions and state
 
-The required acceptance matrix is Terraform 1.15/1.16 with Typesense 29.1/30.2. Typesense 29.1 is retained for compatibility testing, but 30.2 is the supported server target; passing tests do not establish 29.1 support. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
+CI tests Terraform 1.15 and 1.16 with Typesense 29.1 and 30.2. Typesense 29.1 is retained for compatibility testing, but 30.2 is the supported server target; passing tests do not establish 29.1 support. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
 
 Existing state gains resource identity metadata on refresh; resource addresses remain unchanged. Optional `timeouts` settings control operation deadlines. Changing them does not rotate keys or replace collections. See each resource's reference page for timeout defaults.

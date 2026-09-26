@@ -82,7 +82,7 @@ Optional:
 - `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 30.2, fields with store = false have shown search index loss after snapshot and restart; see the collection lifecycle guide.
 - `symbols_to_index` (List of String) Single-byte symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.
 - `token_separators` (List of String) Single-byte token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.
-- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields.
+- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can report cosine after snapshot and restart for a field created with ip; see the collection lifecycle guide.
 
 
 <a id="nestedatt--timeouts"></a>
