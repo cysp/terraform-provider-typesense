@@ -64,7 +64,7 @@ func sameCollectionFields(observed, desired []api.Field) bool {
 
 // Compare modeled attributes after applying Typesense defaults.
 func sameCollectionField(a, b api.Field) bool {
-	fields := CollectionFieldModelsFromAPI([]api.Field{normalizeCollectionField(a), normalizeCollectionField(b)})
+	fields := CollectionFieldModelsFromAPI([]api.Field{a, b})
 
 	return reflect.DeepEqual(fields[0], fields[1])
 }
@@ -87,12 +87,42 @@ func normalizeCollectionField(field api.Field) api.Field {
 	}
 
 	if field.Sort == nil {
-		field.Sort = new(false)
+		field.Sort = new(defaultCollectionFieldSort(field))
 	}
 
 	if field.Locale == nil {
 		value := ""
 		field.Locale = &value
+	}
+
+	if field.Store == nil {
+		field.Store = new(true)
+	}
+
+	if field.RangeIndex == nil {
+		field.RangeIndex = new(false)
+	}
+
+	if field.StemDictionary == nil {
+		value := ""
+		field.StemDictionary = &value
+	}
+
+	if field.Stem == nil {
+		field.Stem = new(*field.StemDictionary != "")
+	}
+
+	if field.NumDim != nil && *field.NumDim > 0 && field.VecDist == nil {
+		value := "cosine"
+		field.VecDist = &value
+	}
+
+	if field.TokenSeparators == nil {
+		field.TokenSeparators = new([]string{})
+	}
+
+	if field.SymbolsToIndex == nil {
+		field.SymbolsToIndex = new([]string{})
 	}
 
 	return field
@@ -143,6 +173,8 @@ func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field
 				old := previous[index]
 				old.Type, old.Facet, old.Index, old.Infix, old.Locale = want.Type, want.Facet, want.Index, want.Infix, want.Locale
 				old.NumDim, old.Optional, old.Reference, old.Sort = want.NumDim, want.Optional, want.Reference, want.Sort
+				old.Store, old.RangeIndex, old.Stem, old.StemDictionary = want.Store, want.RangeIndex, want.Stem, want.StemDictionary
+				old.VecDist, old.TokenSeparators, old.SymbolsToIndex = want.VecDist, want.TokenSeparators, want.SymbolsToIndex
 				want = old
 			}
 

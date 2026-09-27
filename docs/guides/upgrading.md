@@ -22,9 +22,15 @@ when creating it and preserves it in state across refresh. Importing a key
 does not populate `value`. The server-provided `value_prefix` is used unchanged
 and can contain an entire short key; see [API key lifecycle](keys).
 
-## Collection lifecycle
+## Collection updates
 
-Field changes now update the collection in place instead of planning replacement. Review the [collection lifecycle guide](collection-lifecycle) for field ownership, write blocking, dynamic-rule and nested-parent restrictions, and recovery after interrupted operations. Existing collection field attribute names and list types are retained. Collection names and explicitly changed immutable collection settings still require replacement.
+Field changes now update the collection in place instead of planning replacement. Review the [collection lifecycle guide](collection-lifecycle) for field ownership, write blocking, dynamic-rule and nested-parent restrictions, and recovery after interrupted operations. Collection names and explicitly changed immutable collection settings still require replacement.
+
+### Field defaults
+
+Provider 0.0.6 sent and recorded `sort = false` when it was omitted, including for scalar `int32`, `int64`, `float`, and `bool` fields. Omission now resolves to the Typesense default of `true` for those types. An existing field can therefore plan an in-place index alteration even when its configuration has not changed. To retain `false` without altering the field, set `sort = false` explicitly in its declaration. Removing that setting later plans `true`. Otherwise, review and apply the alteration to adopt the Typesense default; reindexing can block writes.
+
+The provider now manages `store`, `range_index`, `stem`, `stem_dictionary`, field `token_separators` and `symbols_to_index`, and vector `vec_dist`. If an existing or imported field has a nondefault setting, omitting it from configuration plans a reset to the Typesense default. Declare the observed setting to retain it, and review any reset before applying. Changes to `store` affect later document writes; values omitted from stored documents are not restored by setting `store = true`. See the [field defaults and storage guidance](collection-lifecycle#field-defaults-and-upgrades).
 
 The provider manages every field returned by Typesense, including concrete fields inferred from document ingestion. On refresh, fields missing from configuration appear as drift. An unchanged configuration can therefore plan an in-place update that removes existing indexes, whether or not provider 0.0.6 previously recorded those fields in state.
 

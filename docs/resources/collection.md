@@ -3,12 +3,12 @@
 page_title: "typesense_collection Resource - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  Manages a Typesense collection and its complete observed field schema. Supported schema changes update the existing collection in place.
+  Manages a Typesense collection and every field returned by its schema API. Supported schema changes update the existing collection in place.
 ---
 
 # typesense_collection (Resource)
 
-Manages a Typesense collection and its complete observed field schema. Supported schema changes update the existing collection in place.
+Manages a Typesense collection and every field returned by its schema API. Supported schema changes update the existing collection in place.
 
 ## Example Usage
 
@@ -49,21 +49,21 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 - `default_sorting_field` (String) Default sorting field returned by Typesense when omitted. Explicit changes require collection replacement.
 - `enable_nested_fields` (Boolean) Whether nested object fields are enabled. Explicit changes require collection replacement.
-- `symbols_to_index` (List of String) Symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.
+- `symbols_to_index` (List of String) Single-byte symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
-- `token_separators` (List of String) Additional token separators. Omission uses the API value. Explicit changes require collection replacement.
+- `token_separators` (List of String) Additional single-byte token separators. Omission uses the API value. Explicit changes require collection replacement.
 
 ### Read-Only
 
 - `created_at` (Number) Collection creation time as Unix seconds.
-- `num_documents` (Number) Current number of stored documents, refreshed from Typesense.
+- `num_documents` (Number) Document count reported by Typesense, refreshed during reads.
 
 <a id="nestedatt--fields"></a>
 ### Nested Schema for `fields`
 
 Required:
 
-- `name` (String) Field name or dynamic pattern. Names in configuration must be unique.
+- `name` (String) Field name or dynamic pattern. Do not declare the reserved `id` field; Typesense manages it automatically and omits it from collection schemas.
 - `type` (String) Typesense field type, for example string, int64, object, auto, or an array type.
 
 Optional:
@@ -72,10 +72,17 @@ Optional:
 - `index` (Boolean) Whether to index this field. Defaults to true.
 - `infix` (Boolean) Whether to enable infix searching. Defaults to false.
 - `locale` (String) Locale used for tokenization. Defaults to the empty string.
-- `num_dim` (Number) Positive number of dimensions for a vector field.
+- `num_dim` (Number) Positive number of dimensions for a float[] vector field.
 - `optional` (Boolean) Whether documents may omit this field. Defaults to false; set true for dynamic fields.
-- `reference` (String) Referenced collection and field for joins. Typesense 29.1 cannot add or modify reference fields on an existing collection; use a new collection or upgrade to 30.2 for those changes.
-- `sort` (Boolean) Whether this field is sortable. Defaults to false.
+- `range_index` (Boolean) Whether to build an index optimized for range filtering on a numerical field. Defaults to false.
+- `reference` (String) Referenced collection and field for joins. Omit for a field without a reference; an explicit empty string is invalid.
+- `sort` (Boolean) Whether this field is sortable. Defaults to true for scalar int32, int64, float, bool and geo fields, and false for other field types. Only these types and scalar string can set true; geo fields other than the exact `.*` fallback cannot set false. Removing an explicit value resets to this type-specific default and can reindex an existing field.
+- `stem` (Boolean) Whether to stem a string or string[] field. Defaults to false, or true when stem_dictionary is nonempty. An explicit false conflicts with a nonempty dictionary.
+- `stem_dictionary` (String) Name of the stemming dictionary for a string or string[] field. Defaults to the empty string. A nonempty value enables stemming.
+- `store` (Boolean) Whether Typesense stores this field's value in documents. Defaults to true. Setting false omits the value from subsequent stored documents; older stored values are not purged, and restoring true cannot recover omitted values. On Typesense 30.2, fields with store = false have shown search index loss after snapshot and restart; see the [collection lifecycle guide](../guides/collection-lifecycle).
+- `symbols_to_index` (List of String) Single-byte symbols to index for this field. A nonempty list overrides the collection-level symbols; an empty list inherits them.
+- `token_separators` (List of String) Single-byte token separators for this field. A nonempty list overrides the collection-level separators; an empty list inherits them.
+- `vec_dist` (String) Vector distance metric, cosine or ip. Defaults to cosine when num_dim declares a float[] vector field; unset for other fields. Typesense 29.1 can report cosine after snapshot and restart for a field created with ip; see the [collection lifecycle guide](../guides/collection-lifecycle).
 
 
 <a id="nestedatt--timeouts"></a>

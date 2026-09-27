@@ -46,6 +46,11 @@ func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequ
 	var data CollectionModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(validatePlannedFallbackFieldConfig(ctx, req.Config, data.Fields)...)
+
+	if !resp.Diagnostics.HasError() {
+		resp.Diagnostics.Append(warnResolvedFieldTokenOverrides(ctx, req.Config, data)...)
+	}
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -122,6 +127,11 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	var data CollectionModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(validatePlannedFallbackFieldConfig(ctx, req.Config, data.Fields)...)
+
+	if !resp.Diagnostics.HasError() {
+		resp.Diagnostics.Append(warnResolvedFieldTokenOverrides(ctx, req.Config, data)...)
+	}
 
 	if resp.Diagnostics.HasError() {
 		return

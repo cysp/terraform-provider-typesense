@@ -3,6 +3,11 @@ package provider //nolint:testpackage // Test private reconciliation helpers.
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -66,5 +71,49 @@ func TestCollectionAlterationBoundary(t *testing.T) {
 				require.Empty(t, diags)
 			}
 		})
+	}
+}
+
+func TestResolvedFieldTokenWarnings(t *testing.T) {
+	t.Parallel()
+
+	planned := collectionUpdateModel(t, []api.Field{
+		{Name: "title", Type: "string", TokenSeparators: new([]string{"+"}), SymbolsToIndex: new([]string{"+"})},
+		{Name: "body", Type: "string", TokenSeparators: new([]string{"+"}), SymbolsToIndex: new([]string{"+"})},
+	}, "5s")
+	planned.TokenSeparators = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("-")})
+	planned.SymbolsToIndex = planned.TokenSeparators
+	configured := planned
+
+	var fields []CollectionFieldModel
+	require.Empty(t, configured.Fields.ElementsAs(t.Context(), &fields, false))
+	// This warning was already available during configuration validation.
+	// The other three become known only at apply.
+	fields[0].SymbolsToIndex = types.ListUnknown(types.StringType)
+	fields[1].TokenSeparators = types.ListUnknown(types.StringType)
+	fields[1].SymbolsToIndex = types.ListUnknown(types.StringType)
+
+	var fieldDiags diag.Diagnostics
+
+	configured.Fields, fieldDiags = types.ListValueFrom(t.Context(), CollectionFieldObjectType(), fields)
+	require.Empty(t, fieldDiags)
+	config := tfsdk.Config{Schema: configured.ResourceSchema(t.Context())}
+	configuredPlan := tfsdk.Plan{Schema: config.Schema}
+	require.Empty(t, configuredPlan.Set(t.Context(), &configured))
+	config.Raw = configuredPlan.Raw
+
+	diags := warnResolvedFieldTokenOverrides(t.Context(), config, planned)
+	require.False(t, diags.HasError())
+	require.Len(t, diags, 3)
+
+	for index, expectedPath := range []path.Path{
+		path.Root("fields").AtListIndex(0).AtName("symbols_to_index"),
+		path.Root("fields").AtListIndex(1).AtName("token_separators"),
+		path.Root("fields").AtListIndex(1).AtName("symbols_to_index"),
+	} {
+		warning, ok := diags[index].(diag.DiagnosticWithPath)
+		require.True(t, ok)
+		require.Equal(t, diag.SeverityWarning, warning.Severity())
+		require.True(t, expectedPath.Equal(warning.Path()), "%s != %s", expectedPath, warning.Path())
 	}
 }
