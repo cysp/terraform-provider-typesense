@@ -83,7 +83,7 @@ func normalizeCollectionField(field api.Field) api.Field {
 	}
 
 	if field.Optional == nil {
-		field.Optional = new(false)
+		field.Optional = new(isCollectionDynamicField(field))
 	}
 
 	if field.Sort == nil {
@@ -148,6 +148,12 @@ func (model *CollectionModel) readCollection(ctx context.Context, response *api.
 
 func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {
 	previous := current.Fields
+	oldFallback := slices.IndexFunc(previous, func(field api.Field) bool { return field.Name == ".*" })
+	newFallback := slices.IndexFunc(desired, func(field api.Field) bool { return field.Name == ".*" })
+
+	if oldFallback >= 0 && newFallback >= 0 && !sameCollectionField(previous[oldFallback], desired[newFallback]) {
+		return nil, fmt.Errorf("%w. No alteration was sent. Remove the fallback in one apply, then add its desired declaration in a second apply, or use a new collection and alias cutover", errCollectionFallbackReplacement)
+	}
 
 	removed, err := collectionFieldsToDrop(current, desired)
 	if err != nil {
@@ -225,18 +231,21 @@ func collectionFieldsToDrop(current *api.CollectionResponse, desired []api.Field
 	return removed, nil
 }
 
-var errCollectionDynamicDrop = errors.New("cannot safely remove or reindex dynamic field")
+var (
+	errCollectionDynamicDrop         = errors.New("cannot safely remove or reindex dynamic field")
+	errCollectionFallbackReplacement = errors.New("typesense cannot replace an existing .* fallback in one schema alteration")
+)
 
 func validateCollectionDynamicDrops(previous []api.Field, removedNames map[string]bool) error {
-	// Names are opaque. A dynamic drop may remove any retained concrete field;
-	// reject that uncertainty instead of interpreting Typesense's regex dialect.
+	// Preserve retained concrete fields unless a simple prefix proves disjointness.
+	// Other patterns are opaque because Typesense uses a different regex dialect.
 	for _, old := range previous {
 		if !removedNames[old.Name] || old.Name == ".*" || !isCollectionDynamicField(old) {
 			continue
 		}
 
 		for _, retained := range previous {
-			if !isCollectionDynamicField(retained) && !removedNames[retained.Name] {
+			if !isCollectionDynamicField(retained) && !removedNames[retained.Name] && !collectionDynamicRuleCannotMatch(old.Name, retained.Name) {
 				return fmt.Errorf("%w %q while retaining concrete field %q. No schema alteration was sent. Remove the dynamic rule and existing concrete fields in a separate apply before adding the desired schema, or use a new collection and an alias cutover", errCollectionDynamicDrop, old.Name, retained.Name)
 			}
 		}
@@ -245,8 +254,47 @@ func validateCollectionDynamicDrops(previous []api.Field, removedNames map[strin
 	return nil
 }
 
+// A literal ASCII name cannot affect an unrelated concrete field. A trailing
+// .* can also affect names under its literal prefix. Keep other patterns opaque:
+// Typesense uses C++ std::regex, not Go regexp.
+func collectionDynamicRuleCannotMatch(pattern, name string) bool {
+	prefix, wildcard := strings.CutSuffix(pattern, ".*")
+	if prefix == "" {
+		return false
+	}
+
+	for _, char := range prefix {
+		if char != '_' && (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') {
+			return false
+		}
+	}
+
+	if wildcard {
+		return !strings.HasPrefix(name, prefix)
+	}
+
+	return name != prefix && !strings.HasPrefix(name, prefix+".")
+}
+
+func collectionFieldCanBeNested(name, fieldType string) bool {
+	return fieldType == "object" || fieldType == "object[]" || (strings.Contains(name, ".") && !strings.Contains(name, ".*"))
+}
+
 func isCollectionDynamicField(field api.Field) bool {
 	return strings.Contains(field.Name, ".*") || slices.Contains([]string{"auto", "string*"}, field.Type)
+}
+
+// Typesense can keep a named auto/string* declaration beside its concrete
+// expansion. The name identifies both rows when altering the collection.
+func collectionSameNamePairAllowed(name, firstType, secondType string) bool {
+	if strings.Contains(name, ".*") || firstType == secondType {
+		return false
+	}
+
+	firstDynamic := slices.Contains([]string{"auto", "string*"}, firstType)
+	secondDynamic := slices.Contains([]string{"auto", "string*"}, secondType)
+
+	return firstDynamic != secondDynamic
 }
 
 // Typesense restores original descendants when adding a nested parent. Combining
@@ -261,8 +309,7 @@ func validateCollectionAlteration(current *api.CollectionResponse, changes []api
 			continue
 		}
 
-		nested := field.Type == "object" || field.Type == "object[]" || (strings.Contains(field.Name, ".") && !strings.Contains(field.Name, ".*"))
-		if !nested {
+		if !collectionFieldCanBeNested(field.Name, field.Type) {
 			continue
 		}
 

@@ -24,6 +24,26 @@ func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typese
 		return collectionSchema, diags
 	}
 
+	seen := make(map[string][]string, len(fields))
+	for _, field := range fields {
+		if field.Name.IsUnknown() || field.Name.IsNull() || field.Type.IsUnknown() || field.Type.IsNull() {
+			continue
+		}
+
+		name, fieldType := field.Name.ValueString(), field.Type.ValueString()
+		previous := seen[name]
+
+		if len(previous) > 1 || len(previous) == 1 && !collectionSameNamePairAllowed(name, previous[0], fieldType) {
+			diags.AddError("Duplicate field declaration", fmt.Sprintf("Field %q may appear twice only for one named auto or string* declaration and one concrete field of another type.", name))
+		}
+
+		seen[name] = append(previous, fieldType)
+	}
+
+	if diags.HasError() {
+		return collectionSchema, diags
+	}
+
 	for _, field := range fields {
 		apiField, fieldDiags := field.ToAPIField(ctx)
 		diags.Append(fieldDiags...)

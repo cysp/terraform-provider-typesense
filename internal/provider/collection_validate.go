@@ -11,27 +11,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var _ resource.ResourceWithValidateConfig = (*collectionResource)(nil)
 
 const (
 	collectionReservedIDMessage      = "Typesense manages the document id field automatically and omits it from collection schemas. Remove the id declaration from fields."
+	collectionDynamicOptionalMessage = "Typesense requires non-nested dynamic fields to set optional = true. With enable_nested_fields = true, object/object[] fields and dotted names without .* are nested and may set optional = false."
 	collectionUnknownFallbackMessage = "The fallback field was unknown during planning, so the provider cannot tell whether options ignored by Typesense were explicitly configured on the exact .* fallback. Declare the fallback directly in fields, or make its value known during planning."
 )
 
 func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var value, collectionSeparators, collectionSymbols types.List
 
+	var enableNested types.Bool
+
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("fields"), &value)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("token_separators"), &collectionSeparators)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("symbols_to_index"), &collectionSymbols)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("enable_nested_fields"), &enableNested)...)
 
 	if resp.Diagnostics.HasError() || value.IsNull() || value.IsUnknown() {
 		return
 	}
 
-	names := make(map[string]bool, len(value.Elements()))
+	names := make(map[string][]types.String, len(value.Elements()))
 	for index, element := range value.Elements() {
 		if element.IsNull() || element.IsUnknown() {
 			continue
@@ -50,17 +55,19 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 
 		name := field.Name.ValueString()
 		fieldPath := path.Root("fields").AtListIndex(index)
-		validateCollectionFieldConfig(field, fieldPath, collectionSeparators, collectionSymbols, &resp.Diagnostics)
+		validateCollectionFieldConfig(field, fieldPath, enableNested, collectionSeparators, collectionSymbols, &resp.Diagnostics)
 
-		if names[name] {
-			resp.Diagnostics.AddAttributeError(fieldPath.AtName("name"), "Duplicate field declaration", "Declare each field name only once.")
+		previous := names[name]
+		if len(previous) > 1 || len(previous) == 1 && !previous[0].IsUnknown() && !field.Type.IsUnknown() &&
+			!collectionSameNamePairAllowed(name, previous[0].ValueString(), field.Type.ValueString()) {
+			resp.Diagnostics.AddAttributeError(fieldPath.AtName("name"), "Duplicate field declaration", "A field name may appear twice only for one named auto or string* declaration and one concrete field of another type.")
 		}
 
-		names[name] = true
+		names[name] = append(previous, field.Type)
 	}
 }
 
-func validateCollectionFieldConfig(field CollectionFieldModel, fieldPath path.Path, collectionSeparators, collectionSymbols types.List, diags *diag.Diagnostics) {
+func validateCollectionFieldConfig(field CollectionFieldModel, fieldPath path.Path, enableNested types.Bool, collectionSeparators, collectionSymbols types.List, diags *diag.Diagnostics) {
 	name := field.Name.ValueString()
 	if name == "id" {
 		diags.AddAttributeError(fieldPath.AtName("name"), "Reserved field name", collectionReservedIDMessage)
@@ -68,7 +75,44 @@ func validateCollectionFieldConfig(field CollectionFieldModel, fieldPath path.Pa
 
 	validateFallbackFieldConfig(field, fieldPath, diags)
 
+	if name != ".*" && collectionFieldRequiredDynamic(field) {
+		canNest := collectionFieldCanBeNested(name, field.Type.ValueString())
+		if !canNest || (!enableNested.IsNull() && !enableNested.IsUnknown() && !enableNested.ValueBool()) {
+			diags.AddAttributeError(fieldPath.AtName("optional"), "Invalid dynamic field optional", collectionDynamicOptionalMessage)
+		}
+	}
+
 	warnFieldTokenOverrides(field, fieldPath, collectionSeparators, collectionSymbols, diags)
+}
+
+func collectionFieldRequiredDynamic(field CollectionFieldModel) bool {
+	return field.Optional.Equal(types.BoolValue(false)) && !field.Name.IsNull() && !field.Name.IsUnknown() &&
+		!field.Type.IsNull() && !field.Type.IsUnknown() &&
+		isCollectionDynamicField(api.Field{Name: field.Name.ValueString(), Type: field.Type.ValueString()})
+}
+
+func validatePlannedDynamicOptional(ctx context.Context, planned CollectionModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
+		return diags
+	}
+
+	var fields []CollectionFieldModel
+	diags.Append(planned.Fields.ElementsAs(ctx, &fields, false)...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	for index, field := range fields {
+		if field.Name.ValueString() != ".*" && collectionFieldRequiredDynamic(field) &&
+			(!planned.EnableNestedFields.ValueBool() || !collectionFieldCanBeNested(field.Name.ValueString(), field.Type.ValueString())) {
+			diags.AddAttributeError(path.Root("fields").AtListIndex(index).AtName("optional"), "Invalid dynamic field optional", collectionDynamicOptionalMessage)
+		}
+	}
+
+	return diags
 }
 
 func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path, diags *diag.Diagnostics) {
