@@ -48,6 +48,6 @@ Omitted `optional` now resolves to `true` for names containing `.*` and types `a
 
 ## Supported versions and state
 
-The tested matrix is Terraform 1.15/1.16 with Typesense 29.1/30.2. Terraform 1.14 and Typesense 28 are no longer tested. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
+Typesense 30.2 is the supported server target. CI tests Terraform 1.15 and 1.16 against both 30.2 and, for compatibility coverage, 29.1. See the [29.1 vector-distance limitation](collection-lifecycle#typesense-291-vector-distance). After updating configuration, run a normal plan with refresh enabled; no manual state edits or re-imports are needed.
 
 Existing state gains resource identity metadata on refresh; resource addresses remain unchanged. Optional `timeouts` settings control operation deadlines. Changing them does not rotate keys or replace collections. See each resource's reference page for timeout defaults.

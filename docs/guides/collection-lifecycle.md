@@ -15,7 +15,7 @@ Removing a field removes its schema and index entry. Values already stored in do
 
 Alterations can block writes while reindexing. When you need a separate cutover, create a collection with a new name, populate it, then update a `typesense_alias` to point to it. Populate and validate the documents using your application or migration tooling.
 
-Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
+Typesense 30.2 supports adding and modifying reference fields on existing collections. Typesense 29.1 rejects these alterations; use a new collection or upgrade the server before changing reference fields on 29.1.
 
 ## Field defaults and upgrades
 
