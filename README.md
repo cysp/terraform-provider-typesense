@@ -29,7 +29,7 @@ resource "typesense_alias" "posts" {
 }
 ```
 
-CI tests Terraform **1.15 and 1.16** with Typesense **29.1 and 30.2**.
+The supported server target is Typesense **30.2**. CI tests Terraform **1.15 and 1.16** against both 30.2 and, for compatibility coverage, **29.1**. The [collection lifecycle guide](docs/guides/collection-lifecycle.md#typesense-291-vector-distance) describes a known 29.1 vector-distance limitation.
 
 Collection field changes alter existing collections in place. Terraform manages every observed field, including fields inferred from document ingestion; fields absent from configuration are planned for index removal. Review the [collection lifecycle guide](docs/guides/collection-lifecycle.md) before changing a production schema, and the [upgrade guide](docs/guides/upgrading.md) when upgrading an existing configuration.
 

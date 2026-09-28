@@ -16,7 +16,6 @@ func TestCollectionModelToAPICollectionSchema(t *testing.T) {
 	var (
 		enableNestedFields = true
 		facet              = true
-		numDim             = 3
 		sort               = true
 		symbolsToIndex     = []string{"+"}
 		tokenSeparators    = []string{"-"}
@@ -40,19 +39,26 @@ func TestCollectionModelToAPICollectionSchema(t *testing.T) {
 				Name: types.StringValue("posts"),
 				Fields: types.ListValueMust(provider.CollectionFieldObjectType(), []attr.Value{
 					types.ObjectValueMust(provider.CollectionFieldObjectType().AttrTypes, map[string]attr.Value{
-						"name":      types.StringValue("embedding"),
-						"type":      types.StringValue("float[]"),
-						"facet":     types.BoolValue(true),
-						"index":     types.BoolNull(),
-						"infix":     types.BoolNull(),
-						"locale":    types.StringNull(),
-						"num_dim":   types.Int64Value(3),
-						"optional":  types.BoolNull(),
-						"reference": types.StringNull(),
-						"sort":      types.BoolValue(true),
+						"name":             types.StringValue("score"),
+						"type":             types.StringValue("int64"),
+						"facet":            types.BoolValue(true),
+						"index":            types.BoolNull(),
+						"infix":            types.BoolNull(),
+						"locale":           types.StringNull(),
+						"num_dim":          types.Int64Null(),
+						"optional":         types.BoolNull(),
+						"reference":        types.StringNull(),
+						"sort":             types.BoolValue(true),
+						"store":            types.BoolNull(),
+						"range_index":      types.BoolNull(),
+						"stem":             types.BoolNull(),
+						"stem_dictionary":  types.StringNull(),
+						"vec_dist":         types.StringNull(),
+						"token_separators": types.ListNull(types.StringType),
+						"symbols_to_index": types.ListNull(types.StringType),
 					}),
 				}),
-				DefaultSortingField: types.StringValue("embedding"),
+				DefaultSortingField: types.StringValue("score"),
 				EnableNestedFields:  types.BoolValue(true),
 				SymbolsToIndex:      types.ListValueMust(types.StringType, []attr.Value{types.StringValue("+")}),
 				TokenSeparators:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("-")}),
@@ -61,14 +67,13 @@ func TestCollectionModelToAPICollectionSchema(t *testing.T) {
 				Name: "posts",
 				Fields: []typesense_api.Field{
 					{
-						Name:   "embedding",
-						Type:   "float[]",
-						Facet:  &facet,
-						NumDim: &numDim,
-						Sort:   &sort,
+						Name:  "score",
+						Type:  "int64",
+						Facet: &facet,
+						Sort:  &sort,
 					},
 				},
-				DefaultSortingField: types.StringValue("embedding").ValueStringPointer(),
+				DefaultSortingField: types.StringValue("score").ValueStringPointer(),
 				EnableNestedFields:  &enableNestedFields,
 				SymbolsToIndex:      &symbolsToIndex,
 				TokenSeparators:     &tokenSeparators,

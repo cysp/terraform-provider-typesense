@@ -61,7 +61,7 @@ func TestCollectionExpansionAdoption(t *testing.T) {
 					{Config: original},
 					{Config: adopted, PreConfig: func() {
 						current := collections["scores"]
-						current.Fields = append(current.Fields, api.Field{Name: "score", Type: "int64", Optional: new(true), Sort: new(true), Store: new(false), Facet: new(false), Infix: new(false), Index: new(true), Locale: new("")})
+						current.Fields = append(current.Fields, api.Field{Name: "score", Type: "int64", Optional: new(true), Sort: new(true), Store: new(true), Facet: new(false), Infix: new(false), Index: new(true), Locale: new("")})
 						collections["scores"] = current
 					}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", action)}}},
 					{Config: adopted, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
@@ -71,7 +71,7 @@ func TestCollectionExpansionAdoption(t *testing.T) {
 						current := collections["scores"]
 						require.Len(t, current.Fields, 2)
 						require.NotNil(t, current.Fields[1].Store)
-						require.False(t, *current.Fields[1].Store)
+						require.True(t, *current.Fields[1].Store)
 					}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 					{Config: original},
 					{Config: original, PreConfig: func() {

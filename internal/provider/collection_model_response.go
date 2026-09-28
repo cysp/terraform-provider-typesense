@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
@@ -39,16 +40,24 @@ func CollectionFieldModelsFromAPI(apiFields []typesense_api.Field) []CollectionF
 	fields := make([]CollectionFieldModel, 0, len(apiFields))
 
 	for _, apiField := range apiFields {
+		apiField = normalizeCollectionField(apiField)
 		field := CollectionFieldModel{
-			Name:      types.StringValue(apiField.Name),
-			Type:      types.StringValue(apiField.Type),
-			Facet:     types.BoolPointerValue(apiField.Facet),
-			Index:     types.BoolPointerValue(apiField.Index),
-			Infix:     types.BoolPointerValue(apiField.Infix),
-			Locale:    types.StringPointerValue(apiField.Locale),
-			Optional:  types.BoolPointerValue(apiField.Optional),
-			Reference: types.StringPointerValue(apiField.Reference),
-			Sort:      types.BoolPointerValue(apiField.Sort),
+			Name:            types.StringValue(apiField.Name),
+			Type:            types.StringValue(apiField.Type),
+			Facet:           types.BoolPointerValue(apiField.Facet),
+			Index:           types.BoolPointerValue(apiField.Index),
+			Infix:           types.BoolPointerValue(apiField.Infix),
+			Locale:          types.StringPointerValue(apiField.Locale),
+			Optional:        types.BoolPointerValue(apiField.Optional),
+			Reference:       types.StringPointerValue(apiField.Reference),
+			Sort:            types.BoolPointerValue(apiField.Sort),
+			Store:           types.BoolPointerValue(apiField.Store),
+			RangeIndex:      types.BoolPointerValue(apiField.RangeIndex),
+			Stem:            types.BoolPointerValue(apiField.Stem),
+			StemDictionary:  types.StringPointerValue(apiField.StemDictionary),
+			VecDist:         types.StringPointerValue(apiField.VecDist),
+			TokenSeparators: collectionFieldStringList(apiField.TokenSeparators),
+			SymbolsToIndex:  collectionFieldStringList(apiField.SymbolsToIndex),
 		}
 
 		if apiField.NumDim != nil {
@@ -61,4 +70,16 @@ func CollectionFieldModelsFromAPI(apiFields []typesense_api.Field) []CollectionF
 	}
 
 	return fields
+}
+
+func collectionFieldStringList(values *[]string) types.List {
+	elements := []attr.Value{}
+
+	if values != nil {
+		for _, value := range *values {
+			elements = append(elements, types.StringValue(value))
+		}
+	}
+
+	return types.ListValueMust(types.StringType, elements)
 }

@@ -112,7 +112,7 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 			index := slices.IndexFunc(current.Fields, func(field api.Field) bool { return field.Name == "title" })
 			require.NotEqual(t, -1, index)
 			require.NotNil(t, current.Fields[index].Store)
-			require.False(t, *current.Fields[index].Store)
+			require.True(t, *current.Fields[index].Store)
 		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 		{Config: strings.ReplaceAll(config, `type="string"`, `type="string[]"`), ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate)}}},
 		{Config: strings.ReplaceAll(config, `type="string"`, `type="string[]"`), PreConfig: func() {
@@ -123,7 +123,7 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 			require.NotEqual(t, -1, index)
 			require.Equal(t, "string[]", current.Fields[index].Type)
 			require.NotNil(t, current.Fields[index].Store)
-			require.False(t, *current.Fields[index].Store)
+			require.True(t, *current.Fields[index].Store)
 		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 	}})
 }
