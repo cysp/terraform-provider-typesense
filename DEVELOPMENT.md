@@ -42,7 +42,19 @@ If a check cannot run, record the command and concrete blocker. Distinguish a pa
 
 ## Documentation authoring
 
-Edit schema descriptions under `internal/provider/`, examples under `examples/`, and the authoritative page or guide template under `templates/`. Follow the [documentation practices](docs/design/provider-documentation.md). Keep handwritten contributor pages outside the directories managed by tfplugindocs.
+Follow the [documentation practices](docs/design/provider-documentation.md), edit the authoritative input, then [regenerate](#code-generation) and [verify the output](#documentation-verification).
+
+| Documentation concern | Authoritative input |
+| --- | --- |
+| Provider, resource, data-source, function and attribute contracts | Schema and function descriptions under `internal/provider/` |
+| Terraform configuration and import syntax | `examples/` |
+| Provider page | `templates/index.md.tmpl` |
+| Common resource layout | `templates/resources.md.tmpl` |
+| Common data-source layout | `templates/data-sources.md.tmpl` |
+| Common function layout | `templates/functions.md.tmpl` |
+| Practitioner guides | `templates/guides/` |
+
+Keep handwritten contributor pages outside the directories managed by tfplugindocs.
 
 ## Code generation
 
@@ -108,6 +120,11 @@ go test ./internal/provider -run '^TestProtocol6ProviderServerSchemaVersion$' -c
 
 Use the current test name from the source. A successful command with
 `[no tests to run]` has not checked the intended behavior.
+
+For order-dependent failures, rerun with the `-shuffle=<seed>` printed by Go.
+Add `-v` for test and subtest progress. Use `TF_LOG=DEBUG` or
+`TF_ACC_PERSIST_WORKING_DIR=1` for focused acceptance debugging. Logs and
+retained Terraform state may contain credentials.
 
 ### Acceptance tests
 
