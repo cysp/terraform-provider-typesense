@@ -1,6 +1,7 @@
 package provider //nolint:testpackage // Test private reconciliation helpers.
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,6 +34,30 @@ func TestCollectionFieldOrdering(t *testing.T) {
 
 			actual := collectionFields(test.observed, test.prior)
 			require.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestCollectionEmbeddingModelConfiguration(t *testing.T) {
+	t.Parallel()
+
+	for _, property := range []string{"api_key", "access_token", "refresh_token", "client_id", "client_secret", "project_id", "indexing_prefix"} {
+		t.Run(property, func(t *testing.T) {
+			t.Parallel()
+
+			var field api.Field
+			require.NoError(t, json.Unmarshal([]byte(`{"name":"embedding","type":"float[]","embed":{"from":["text"],"model_config":{"model_name":"example","`+property+`":"fixture"}}}`), &field))
+			diags := validateCollectionAlteration(&api.CollectionResponse{}, []api.Field{field})
+
+			if property == "indexing_prefix" {
+				require.Empty(t, diags)
+
+				return
+			}
+
+			require.Len(t, diags, 1)
+			require.Equal(t, "Cannot reindex embedding field", diags[0].Summary())
+			require.NotContains(t, diags[0].Detail(), "fixture")
 		})
 	}
 }
