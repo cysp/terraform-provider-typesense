@@ -139,14 +139,8 @@ Live acceptance runs each of those versions against Typesense 29.1 and 30.2.
 The [CI workflow](.github/workflows/ci.yml) runs on pull requests, pushes to
 main and manual dispatch. The `ci` gate requires generation, linting, vulnerability
 scanning, tests, fuzz campaigns and the GoReleaser configuration check to
-succeed. A skipped or cancelled prerequisite also fails the gate. CodeQL and
-Codecov report separately.
-
-During the required-check migration, `generate` and `lint` mirror their
-reusable workflows. Both `test` and `testacc` require the entire test workflow,
-including the mocked and live matrices. Before removing these four checks,
-verify the replacements on the reviewed revision and main, then update the
-repository rules. Preserve the separate CodeQL requirement.
+succeed. A skipped or cancelled prerequisite also fails the gate. Merges also
+require Codecov’s `codecov/project` check and the repository’s CodeQL rule.
 
 ## Releases
 
