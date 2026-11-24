@@ -43,6 +43,14 @@ Import does not populate `value`. Both data sources omit the `value` attribute a
 
 The listing is ordered by numeric key id and returns an empty list when no keys exist. A missing singular lookup produces an error.
 
+## Recovering from an uncertain create
+
+If Typesense creates a key but Terraform loses the response, the key can be active even though Terraform has no ID or generated secret in state. A second apply can create another key.
+
+1. Before retrying, check the resource in Terraform state and list the server's key metadata with a credential that has `keys:list`.
+2. Compare the IDs with your last known key inventory and the actions, collections, expiration and description you requested. Descriptions and prefixes can match more than one key. If ownership is unclear, reconcile the candidates with the other key owners before revoking anything.
+3. Once you identify a newly created, untracked key whose generated secret was lost, revoke it by ID with a credential that has `keys:delete`. Confirm its removal, then plan and apply again to create the replacement. Importing the ID can recover management of the key, but the server only returns a generated secret at creation.
+
 ## Rotation and revocation
 
 Changes to a key's remote attributes replace it. `create_before_destroy` allows Terraform to create the replacement before deleting the old key, provided the replacement uses a different secret. Typesense rejects duplicate secrets, so an unchanged explicitly configured `value` cannot be used for overlapping replacement.
