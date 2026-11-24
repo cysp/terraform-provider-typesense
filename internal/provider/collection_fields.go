@@ -129,21 +129,46 @@ func normalizeCollectionField(field api.Field) api.Field {
 }
 
 func (model *CollectionModel) readCollection(ctx context.Context, response *api.CollectionResponse) diag.Diagnostics {
-	prior, diags := model.ToAPICollectionSchema(ctx)
-	if model.Fields.IsNull() || model.Fields.IsUnknown() {
-		diags = nil
-		prior.Fields = nil
+	var (
+		prior []CollectionFieldModel
+		diags diag.Diagnostics
+	)
+	if !model.Fields.IsNull() && !model.Fields.IsUnknown() {
+		diags.Append(model.Fields.ElementsAs(ctx, &prior, false)...)
+
+		if diags.HasError() {
+			return diags
+		}
 	}
 
-	if diags.HasError() {
-		return diags
+	order := make([]api.Field, 0, len(prior))
+	for _, field := range prior {
+		order = append(order, api.Field{Name: field.Name.ValueString(), Type: field.Type.ValueString()})
 	}
 
 	responseCopy := *response
-	responseCopy.Fields = collectionFields(response.Fields, prior.Fields)
+	responseCopy.Fields = collectionFields(response.Fields, order)
 	diags.Append(model.ReadFromResponse(ctx, &responseCopy)...)
 
 	return diags
+}
+
+// Historical and imported state records what the server returned. It may
+// contain combinations the provider would reject in a new declaration.
+func (model *CollectionModel) observedAPIFields(ctx context.Context) ([]api.Field, diag.Diagnostics) {
+	var stored []CollectionFieldModel
+
+	priorDiags := model.Fields.ElementsAs(ctx, &stored, false)
+
+	prior := make([]api.Field, 0, len(stored))
+	for _, field := range stored {
+		converted, diags := field.ToAPIField(ctx)
+		priorDiags.Append(diags...)
+
+		prior = append(prior, converted)
+	}
+
+	return prior, priorDiags
 }
 
 func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {

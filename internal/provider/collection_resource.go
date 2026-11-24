@@ -192,14 +192,14 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	prior, priorDiags := state.ToAPICollectionSchema(ctx)
+	prior, priorDiags := state.observedAPIFields(ctx)
 	resp.Diagnostics.Append(priorDiags...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if !sameCollectionFields(current.Fields, prior.Fields) && !sameCollectionFields(current.Fields, want.Fields) {
+	if !sameCollectionFields(current.Fields, prior) && !sameCollectionFields(current.Fields, want.Fields) {
 		resp.Diagnostics.AddError("Collection schema changed since planning", "No schema alteration was sent. The observed managed field schema matches neither the schema recorded when planning nor the planned result. Run a new plan with refresh enabled and review its field changes before applying again.")
 
 		return

@@ -45,6 +45,7 @@ func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typese
 	}
 
 	for _, field := range fields {
+		diags.Append(field.validateCollectionFieldOptions()...)
 		apiField, fieldDiags := field.ToAPIField(ctx)
 		diags.Append(fieldDiags...)
 
@@ -86,12 +87,6 @@ func (model *CollectionFieldModel) ToAPIField(ctx context.Context) (typesense_ap
 	apiField := typesense_api.Field{
 		Name: model.Name.ValueString(),
 		Type: model.Type.ValueString(),
-	}
-
-	diags.Append(model.validateCollectionFieldOptions()...)
-
-	if diags.HasError() {
-		return typesense_api.Field{}, diags
 	}
 
 	if !model.Facet.IsUnknown() && !model.Facet.IsNull() {
