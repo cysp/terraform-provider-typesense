@@ -6,7 +6,7 @@ Set `TYPESENSE_URL` to your cluster API endpoint and `TYPESENSE_API_KEY` to a ke
 
 ```hcl
 terraform {
-  required_version = ">= 1.15, < 1.17"
+  required_version = ">= 1.15, < 1.18"
   required_providers {
     typesense = {
       source = "cysp/typesense"
@@ -29,7 +29,7 @@ resource "typesense_alias" "posts" {
 }
 ```
 
-CI tests Terraform **1.15 and 1.16** with Typesense **29.1 and 30.2**.
+CI tests Terraform **1.15, 1.16 and 1.17** with Typesense **29.1 and 30.2**.
 
 Collection field changes alter existing collections in place. Terraform manages every observed field, including fields inferred from document ingestion; fields absent from configuration are planned for index removal. Review the [collection lifecycle guide](docs/guides/collection-lifecycle.md) before changing a production schema, and the [upgrade guide](docs/guides/upgrading.md) when upgrading an existing configuration.
 
