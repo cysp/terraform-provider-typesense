@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -60,6 +61,47 @@ func TestAccAliasResourceCreateUpdateDelete(t *testing.T) {
 	})
 
 	assert.Empty(t, aliases)
+}
+
+func TestAccAliasResourceCreateChecksOwnership(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name   string
+		target string
+		status int
+		want   string
+	}{
+		{"same_target", "posts_v1", http.StatusOK, "Alias already exists"},
+		{"different_target", "posts_v2", http.StatusOK, "Alias already exists"},
+		{"forbidden", "", http.StatusForbidden, "Error checking alias before creation"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "/aliases/posts", req.URL.Path)
+
+				if test.status != http.StatusOK {
+					http.Error(w, "Forbidden", test.status)
+
+					return
+				}
+
+				writeJSON(t, w, http.StatusOK, typesense_api.CollectionAlias{Name: new("posts"), CollectionName: test.target})
+			}))
+			t.Cleanup(server.Close)
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{{Config: providerConfig(server.URL) + `resource "typesense_alias" "test" {
+  name            = "posts"
+  collection_name = "posts_v1"
+}`, ExpectError: regexp.MustCompile(test.want)}},
+			})
+		})
+	}
 }
 
 func handleLocalAliasRequest(t *testing.T, aliases map[string]typesense_api.CollectionAlias, w http.ResponseWriter, req *http.Request) {

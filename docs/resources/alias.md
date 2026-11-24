@@ -3,12 +3,12 @@
 page_title: "typesense_alias Resource - terraform-provider-typesense"
 subcategory: ""
 description: |-
-  Manages a Typesense collection alias. Changing its target updates the alias in place.
+  Manages a Typesense collection alias. Import an existing alias before managing it, even if it already points to the desired collection. Changing its target updates the alias in place. Coordinate concurrent writers because Typesense uses separate lookup and upsert requests.
 ---
 
 # typesense_alias (Resource)
 
-Manages a Typesense collection alias. Changing its target updates the alias in place.
+Manages a Typesense collection alias. Import an existing alias before managing it, even if it already points to the desired collection. Changing its target updates the alias in place. Coordinate concurrent writers because Typesense uses separate lookup and upsert requests.
 
 ## Example Usage
 

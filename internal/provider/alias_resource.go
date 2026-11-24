@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -57,9 +58,24 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	name := data.Name.ValueString()
+
+	_, err := r.providerData.client.Alias(name).Retrieve(ctx)
+	if err == nil {
+		resp.Diagnostics.AddError("Alias already exists", fmt.Sprintf("Import the existing Typesense alias %q before managing it with this resource.", name))
+
+		return
+	}
+
+	if !typesenseNotFound(err) {
+		resp.Diagnostics.AddError("Error checking alias before creation", err.Error())
+
+		return
+	}
+
 	aliasSchema := data.ToAPICollectionAliasSchema()
 
-	createdAlias, err := r.providerData.client.Aliases().Upsert(ctx, data.Name.ValueString(), &aliasSchema)
+	createdAlias, err := r.providerData.client.Aliases().Upsert(ctx, name, &aliasSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating alias", err.Error())
 
