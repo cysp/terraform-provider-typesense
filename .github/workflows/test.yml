@@ -78,7 +78,7 @@ jobs:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
 
-      - run: go test -count=1 -timeout=15m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... -run '^TestAcc' ./internal/provider/
+      - run: go test -race -count=1 -timeout=15m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... -run '^TestAcc' ./internal/provider/
         env:
           TF_ACC: "1"
           TF_ACC_MOCKED: "1"
