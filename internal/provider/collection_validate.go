@@ -2,18 +2,30 @@ package provider
 
 import (
 	"context"
+	"slices"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 var _ resource.ResourceWithValidateConfig = (*collectionResource)(nil)
 
+const (
+	collectionReservedIDMessage      = "Typesense manages the document id field automatically and omits it from collection schemas. Remove the id declaration from fields."
+	collectionUnknownFallbackMessage = "The fallback field was unknown during planning, so the provider cannot tell whether options ignored by Typesense were explicitly configured on the exact .* fallback. Declare the fallback directly in fields, or make its value known during planning."
+)
+
 func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var value types.List
+	var value, collectionSeparators, collectionSymbols types.List
+
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("fields"), &value)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("token_separators"), &collectionSeparators)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("symbols_to_index"), &collectionSymbols)...)
 
 	if resp.Diagnostics.HasError() || value.IsNull() || value.IsUnknown() {
 		return
@@ -37,10 +49,252 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		}
 
 		name := field.Name.ValueString()
+		fieldPath := path.Root("fields").AtListIndex(index)
+		validateCollectionFieldConfig(field, fieldPath, collectionSeparators, collectionSymbols, &resp.Diagnostics)
+
 		if names[name] {
-			resp.Diagnostics.AddAttributeError(path.Root("fields").AtListIndex(index).AtName("name"), "Duplicate field declaration", "Declare each field name only once.")
+			resp.Diagnostics.AddAttributeError(fieldPath.AtName("name"), "Duplicate field declaration", "Declare each field name only once.")
 		}
 
 		names[name] = true
 	}
+}
+
+func validateCollectionFieldConfig(field CollectionFieldModel, fieldPath path.Path, collectionSeparators, collectionSymbols types.List, diags *diag.Diagnostics) {
+	name := field.Name.ValueString()
+	if name == "id" {
+		diags.AddAttributeError(fieldPath.AtName("name"), "Reserved field name", collectionReservedIDMessage)
+	}
+
+	validateFallbackFieldConfig(field, fieldPath, diags)
+
+	warnFieldTokenOverrides(field, fieldPath, collectionSeparators, collectionSymbols, diags)
+}
+
+func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path, diags *diag.Diagnostics) {
+	if field.Name.ValueString() != ".*" {
+		return
+	}
+
+	for _, option := range []struct {
+		name  string
+		value attr.Value
+	}{
+		{"num_dim", field.NumDim},
+		{"store", field.Store},
+		{"range_index", field.RangeIndex},
+		{"stem", field.Stem},
+		{"stem_dictionary", field.StemDictionary},
+		{"vec_dist", field.VecDist},
+		{"token_separators", field.TokenSeparators},
+		{"symbols_to_index", field.SymbolsToIndex},
+	} {
+		if !option.value.IsNull() {
+			diags.AddAttributeError(fieldPath.AtName(option.name), "Unsupported fallback field option", "Typesense ignores this option on the exact .* fallback field. Remove it from this field's configuration.")
+		}
+	}
+
+	for _, option := range []struct {
+		name    string
+		invalid bool
+	}{
+		{"optional", !field.Optional.IsNull() && !field.Optional.IsUnknown() && !field.Optional.ValueBool()},
+		{"facet", !field.Facet.IsNull() && !field.Facet.IsUnknown() && field.Facet.ValueBool()},
+		{"index", !field.Index.IsNull() && !field.Index.IsUnknown() && !field.Index.ValueBool()},
+		{"reference", !field.Reference.IsNull() && !field.Reference.IsUnknown() && field.Reference.ValueString() != ""},
+	} {
+		if option.invalid {
+			diags.AddAttributeError(fieldPath.AtName(option.name), "Invalid fallback field option", "Typesense requires the exact .* fallback field to be optional and indexed, and does not allow faceting or references on it.")
+		}
+	}
+}
+
+func warnFieldTokenOverrides(field CollectionFieldModel, fieldPath path.Path, collectionSeparators, collectionSymbols types.List, diags *diag.Diagnostics) {
+	if field.Name.ValueString() == ".*" {
+		return
+	}
+
+	for _, option := range fieldTokenOverrideOptions(field, collectionSeparators, collectionSymbols) {
+		addFieldTokenOverrideWarning(fieldPath.AtName(option), option, diags)
+	}
+}
+
+func fieldTokenOverrideOptions(field CollectionFieldModel, collectionSeparators, collectionSymbols types.List) []string {
+	var overrides []string
+
+	for _, option := range []struct {
+		name       string
+		collection types.List
+		field      types.List
+	}{
+		{"token_separators", collectionSeparators, field.TokenSeparators},
+		{"symbols_to_index", collectionSymbols, field.SymbolsToIndex},
+	} {
+		if !fieldTokenListDropsCollectionValues(option.collection, option.field) {
+			continue
+		}
+
+		overrides = append(overrides, option.name)
+	}
+
+	return overrides
+}
+
+func addFieldTokenOverrideWarning(optionPath path.Path, option string, diags *diag.Diagnostics) {
+	diags.AddAttributeWarning(optionPath, "Field tokenization overrides collection setting", "The field-level "+option+" list replaces the collection-level list for this field. Include any collection-level characters you also want in the field list.")
+}
+
+func fieldTokenListDropsCollectionValues(collection, field types.List) bool {
+	if collection.IsNull() || collection.IsUnknown() || field.IsNull() || field.IsUnknown() ||
+		len(collection.Elements()) == 0 || len(field.Elements()) == 0 {
+		return false
+	}
+
+	for _, value := range collection.Elements() {
+		if value.IsUnknown() {
+			return false
+		}
+	}
+
+	for _, value := range field.Elements() {
+		if value.IsUnknown() {
+			return false
+		}
+	}
+
+	for _, value := range collection.Elements() {
+		if !slices.ContainsFunc(field.Elements(), value.Equal) {
+			return true
+		}
+	}
+
+	return false
+}
+
+type collectionFieldTokenOverride struct {
+	fieldIndex int
+	option     string
+}
+
+// A plan may contain tokenization values that were unknown in configuration.
+func collectionTokenOverrides(ctx context.Context, planned CollectionModel) ([]collectionFieldTokenOverride, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	var overrides []collectionFieldTokenOverride
+	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
+		return overrides, diags
+	}
+
+	var fields []CollectionFieldModel
+	diags.Append(planned.Fields.ElementsAs(ctx, &fields, false)...)
+
+	if diags.HasError() {
+		return overrides, diags
+	}
+
+	for index, field := range fields {
+		if field.Name.IsNull() || field.Name.IsUnknown() || field.Name.ValueString() == ".*" {
+			continue
+		}
+
+		for _, option := range fieldTokenOverrideOptions(field, planned.TokenSeparators, planned.SymbolsToIndex) {
+			overrides = append(overrides, collectionFieldTokenOverride{fieldIndex: index, option: option})
+		}
+	}
+
+	return overrides, diags
+}
+
+// Configuration validation reports known overrides during planning. Report only
+// those that became known at apply, without repeating the earlier warning.
+func warnResolvedFieldTokenOverrides(ctx context.Context, config tfsdk.Config, planned CollectionModel) diag.Diagnostics {
+	if config.Schema == nil {
+		return nil
+	}
+
+	var configured CollectionModel
+
+	diags := config.Get(ctx, &configured)
+	if diags.HasError() {
+		return diags
+	}
+
+	known, knownDiags := collectionTokenOverrides(ctx, configured)
+	diags.Append(knownDiags...)
+
+	resolved, resolvedDiags := collectionTokenOverrides(ctx, planned)
+	diags.Append(resolvedDiags...)
+
+	if diags.HasError() {
+		return diags
+	}
+
+	for _, override := range resolved {
+		if slices.Contains(known, override) {
+			continue
+		}
+
+		optionPath := path.Root("fields").AtListIndex(override.fieldIndex).AtName(override.option)
+		addFieldTokenOverrideWarning(optionPath, override.option, &diags)
+	}
+
+	return diags
+}
+
+// A configured field name may become known only after configuration validation.
+// Recheck explicit fallback options against the resolved plan before mutation.
+func validatePlannedFallbackFieldConfig(ctx context.Context, config tfsdk.Config, planned types.List) diag.Diagnostics {
+	if config.Schema == nil {
+		return nil
+	}
+
+	var configured types.List
+
+	diags := config.GetAttribute(ctx, path.Root("fields"), &configured)
+
+	if diags.HasError() || configured.IsNull() || planned.IsNull() || planned.IsUnknown() {
+		return diags
+	}
+
+	if configured.IsUnknown() {
+		if _, found := collectionExactFallback(planned); found {
+			diags.AddAttributeError(path.Root("fields"), "Cannot validate computed fallback fields", collectionUnknownFallbackMessage)
+		}
+
+		return diags
+	}
+
+	plannedElements := planned.Elements()
+	for index, element := range configured.Elements() {
+		if index >= len(plannedElements) || plannedElements[index].IsNull() || plannedElements[index].IsUnknown() {
+			continue
+		}
+
+		name := plannedElements[index].(types.Object).Attributes()["name"].(types.String) //nolint:forcetypeassert // The field schema guarantees these types.
+		if name.IsNull() || name.IsUnknown() || name.ValueString() != ".*" {
+			continue
+		}
+
+		if element.IsUnknown() {
+			diags.AddAttributeError(path.Root("fields").AtListIndex(index), "Cannot validate computed fallback field", collectionUnknownFallbackMessage)
+
+			continue
+		}
+
+		if element.IsNull() {
+			continue
+		}
+
+		var field CollectionFieldModel
+		diags.Append(element.(types.Object).As(ctx, &field, basetypes.ObjectAsOptions{})...) //nolint:forcetypeassert // The field schema guarantees object elements.
+
+		if diags.HasError() {
+			return diags
+		}
+
+		field.Name = name
+		validateFallbackFieldConfig(field, path.Root("fields").AtListIndex(index), &diags)
+	}
+
+	return diags
 }
