@@ -130,22 +130,8 @@ func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field
 	}
 
 	for _, want := range desired {
-		index := slices.IndexFunc(previous, func(field api.Field) bool { return field.Name == want.Name && field.Type == want.Type })
-
-		if index < 0 || slices.ContainsFunc(removed, func(field api.Field) bool { return field.Name == want.Name }) || !sameCollectionField(previous[index], want) {
-			// Preserve API attributes which are outside the current Terraform schema,
-			// including when the declaration changes type.
-			if index < 0 {
-				index = slices.IndexFunc(previous, func(field api.Field) bool { return field.Name == want.Name })
-			}
-
-			if index >= 0 {
-				old := previous[index]
-				old.Type, old.Facet, old.Index, old.Infix, old.Locale = want.Type, want.Facet, want.Index, want.Infix, want.Locale
-				old.NumDim, old.Optional, old.Reference, old.Sort = want.NumDim, want.Optional, want.Reference, want.Sort
-				want = old
-			}
-
+		dropped := slices.ContainsFunc(removed, func(field api.Field) bool { return field.Name == want.Name })
+		if dropped || !slices.ContainsFunc(previous, func(field api.Field) bool { return field.Name == want.Name && field.Type == want.Type }) {
 			changes = append(changes, want)
 		}
 	}
@@ -229,34 +215,32 @@ func hasEmbeddingCredentials(field api.Field) bool {
 		config.ClientId != nil || config.ClientSecret != nil || config.ProjectId != nil
 }
 
-func validateCollectionAlteration(current *api.CollectionResponse, changes []api.Field) diag.Diagnostics {
-	for _, field := range changes {
-		if field.Drop != nil && *field.Drop {
+func validateCollectionFieldAlteration(current *api.CollectionResponse, field api.Field) diag.Diagnostics {
+	if field.Drop != nil && *field.Drop {
+		return nil
+	}
+
+	if hasEmbeddingCredentials(field) {
+		return diag.Diagnostics{diag.NewErrorDiagnostic("Cannot reindex embedding field", fmt.Sprintf("Typesense masks embedding credentials when reading field %q. No schema alteration was sent. Apply this field change through Typesense with the original model configuration and credentials, then refresh and review a new Terraform plan.", field.Name))}
+	}
+
+	if current.EnableNestedFields == nil || !*current.EnableNestedFields {
+		return nil
+	}
+
+	// Typesense restores original descendants when adding a nested parent.
+	nested := field.Type == "object" || field.Type == "object[]" || (strings.Contains(field.Name, ".") && !strings.Contains(field.Name, ".*"))
+	if !nested {
+		return nil
+	}
+
+	for _, existing := range current.Fields {
+		if strings.Contains(existing.Name, ".*") || slices.Contains([]string{"auto", "string*"}, existing.Type) {
 			continue
 		}
 
-		if hasEmbeddingCredentials(field) {
-			return diag.Diagnostics{diag.NewErrorDiagnostic("Cannot reindex embedding field", fmt.Sprintf("Typesense masks embedding credentials when reading field %q. No schema alteration was sent. Apply this field change through Typesense with the original model configuration and credentials, then refresh and review a new Terraform plan.", field.Name))}
-		}
-
-		if current.EnableNestedFields == nil || !*current.EnableNestedFields {
-			continue
-		}
-
-		// Typesense restores original descendants when adding a nested parent.
-		nested := field.Type == "object" || field.Type == "object[]" || (strings.Contains(field.Name, ".") && !strings.Contains(field.Name, ".*"))
-		if !nested {
-			continue
-		}
-
-		for _, existing := range current.Fields {
-			if strings.Contains(existing.Name, ".*") || slices.Contains([]string{"auto", "string*"}, existing.Type) {
-				continue
-			}
-
-			if strings.HasPrefix(existing.Name, field.Name+".") {
-				return diag.Diagnostics{diag.NewErrorDiagnostic("Overlapping collection field alteration", fmt.Sprintf("No schema alteration was sent. Field %q cannot be added or reindexed while nested field %q exists: Typesense can restore the old descendants or fail after changing the schema. Apply removal of the affected parent and children first, verify their absence, then apply the desired declarations. Remove rules or coordinate writes that could recreate these fields between applies. Alternatively, use a new collection and an alias cutover.", field.Name, existing.Name))}
-			}
+		if strings.HasPrefix(existing.Name, field.Name+".") {
+			return diag.Diagnostics{diag.NewErrorDiagnostic("Overlapping collection field alteration", fmt.Sprintf("No schema alteration was sent. Field %q cannot be added or reindexed while nested field %q exists: Typesense can restore the old descendants or fail after changing the schema. Apply removal of the affected parent and children first, verify their absence, then apply the desired declarations. Remove rules or coordinate writes that could recreate these fields between applies. Alternatively, use a new collection and an alias cutover.", field.Name, existing.Name))}
 		}
 	}
 

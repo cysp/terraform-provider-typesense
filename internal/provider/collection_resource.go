@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
-	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var (
@@ -165,12 +164,14 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Verify the planned starting schema, or recognize an already-completed change.
-	current, err := r.providerData.api.getCollection(ctx, data.Name.ValueString())
+	observed, err := r.providerData.api.getCollectionForAlteration(ctx, data.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading collection before update", err.Error())
 
 		return
 	}
+
+	current := &observed.schema
 
 	want, wantDiags := data.ToAPICollectionSchema(ctx)
 
@@ -200,14 +201,15 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	resp.Diagnostics.Append(validateCollectionAlteration(current, changes)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	if len(changes) > 0 {
-		_, err = r.providerData.api.updateCollection(ctx, data.Name.ValueString(), api.CollectionUpdateSchema{Fields: changes})
+		body, diags := observed.encodeAlteration(changes)
+		resp.Diagnostics.Append(diags...)
+
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		err = r.providerData.api.updateCollection(ctx, data.Name.ValueString(), body)
 		if err != nil {
 			resp.Diagnostics.AddError("Collection update did not complete successfully", "The request was sent once and was not retried. Its completion may be uncertain. Wait for schema alteration activity to finish, then refresh and plan again before applying. "+err.Error())
 
