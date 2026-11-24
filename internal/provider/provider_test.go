@@ -14,7 +14,9 @@ import (
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"typesense": providerserver.NewProtocol6WithError(provider.New("test")()),
+	"typesense": func() (tfprotov6.ProviderServer, error) {
+		return providerserver.NewProtocol6WithError(provider.New("test")())()
+	},
 }
 
 func requireLiveAcceptance(t *testing.T) {
