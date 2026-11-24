@@ -1,13 +1,13 @@
 ---
-page_title: "Upgrading from provider 0.0.6"
+page_title: "Upgrading the Typesense provider"
 subcategory: ""
 description: |-
-  Configuration and lifecycle changes when upgrading from provider 0.0.6.
+  Configuration and lifecycle changes for upgrades from 0.0.6, 0.1.0 and 0.1.1.
 ---
 
-# Upgrading from provider 0.0.6
+# Upgrading the Typesense provider
 
-This guide describes the changes from provider 0.0.6. Back up Terraform state before upgrading, and review the first plan before applying it. A provider downgrade does not reverse schema or index changes already applied to Typesense.
+When upgrading from 0.1.0 or 0.1.1, review [field defaults](#field-defaults) and [dynamic declarations](#dynamic-declarations). When upgrading from 0.0.6, review all sections. Back up Terraform state before upgrading, and review the first plan before applying it. A provider downgrade does not reverse schema or index changes already applied to Typesense.
 
 ## Key data source
 
@@ -28,7 +28,7 @@ Field changes now update the collection in place instead of planning replacement
 
 ### Field defaults
 
-Provider 0.0.6 sent and recorded `sort = false` when it was omitted, including for scalar `int32`, `int64`, `float`, and `bool` fields. Omission now resolves to the Typesense default of `true` for those types. An existing field can therefore plan an in-place index alteration even when its configuration has not changed. To retain `false` without altering the field, set `sort = false` explicitly in its declaration. Removing that setting later plans `true`. Otherwise, review and apply the alteration to adopt the Typesense default; reindexing can block writes.
+Providers 0.0.6, 0.1.0 and 0.1.1 sent and recorded `sort = false` when it was omitted, including for scalar `int32`, `int64`, `float`, and `bool` fields. Omission now resolves to the Typesense default of `true` for those types. An existing field can therefore plan an in-place index alteration even when its configuration has not changed. To retain `false` without altering the field, set `sort = false` explicitly in its declaration. Removing that setting later plans `true`. Otherwise, review and apply the alteration to adopt the Typesense default; reindexing can block writes.
 
 The provider now manages `store`, `range_index`, `stem`, `stem_dictionary`, field `token_separators` and `symbols_to_index`, and vector `vec_dist`. If an existing or imported field has a nondefault setting, omitting it from configuration plans a reset to the Typesense default. Declare the observed setting to retain it, and review any reset before applying. Changes to `store` affect later document writes; values omitted from stored documents are not restored by setting `store = true`. See the [field defaults and storage guidance](collection-lifecycle#field-defaults-and-upgrades).
 
@@ -48,6 +48,6 @@ Omitted `optional` now resolves to `true` for names containing `.*` and types `a
 
 ## Supported versions and state
 
-The tested matrix is Terraform 1.15/1.16/1.17 with Typesense 29.1/30.2. Terraform 1.14 and Typesense 28 are no longer tested. After updating the configuration, refresh existing resources without manually editing state or re-importing them.
+Typesense 30.2 is the supported server target. CI tests Terraform 1.15, 1.16 and 1.17 against both 30.2 and, for compatibility coverage, 29.1. See the [29.1 vector-distance limitation](collection-lifecycle#typesense-291-vector-distance). After updating configuration, run a normal plan with refresh enabled; no manual state edits or re-imports are needed.
 
 Existing state gains resource identity metadata on refresh; resource addresses remain unchanged. Optional `timeouts` settings control operation deadlines. Changing them does not rotate keys or replace collections. See each resource's reference page for timeout defaults.

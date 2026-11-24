@@ -211,7 +211,7 @@ entries. A campaign that passes establishes only the inputs it exercised.
 
 The [test workflow](.github/workflows/test.yml) defines the Terraform matrix
 and coverage flags. Mocked acceptance runs with the Go race detector on Terraform 1.15, 1.16 and 1.17.
-Live acceptance runs each of those versions against Typesense 29.1 and 30.2.
+Live acceptance runs each of those versions against the supported Typesense 30.2 target and checks compatibility with Typesense 29.1.
 
 The [CI workflow](.github/workflows/ci.yml) runs on pull requests, pushes to
 main and manual dispatch. The `ci` gate requires generation, linting, vulnerability

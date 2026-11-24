@@ -15,7 +15,7 @@ Removing a field removes its schema and index entry. Values already stored in do
 
 Alterations can block writes while reindexing. When you need a separate cutover, create a collection with a new name, populate it, then update a `typesense_alias` to point to it. Populate and validate the documents using your application or migration tooling.
 
-Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
+Typesense 30.2 supports adding and modifying reference fields on existing collections. Typesense 29.1 rejects these alterations; use a new collection or upgrade the server before changing reference fields on 29.1.
 
 ## Field defaults and upgrades
 
@@ -29,7 +29,7 @@ The defaults depend on the field:
 - `vec_dist` defaults to `cosine` for a `float[]` vector field with `num_dim` and is unset otherwise.
 - `store` defaults to `true`; `range_index` defaults to `false`; `stem_dictionary` defaults to an empty string. Enabling `range_index` requires a numerical field.
 
-These rules also apply to existing and imported fields. If an observed nondefault setting is absent from configuration, applying the next plan can drop and readd the field index to restore the default. Declare the observed value to retain it. For the changes from provider 0.0.6, including numeric and boolean `sort`, see the [upgrade guide](upgrading#field-defaults).
+These rules also apply to existing and imported fields. If an observed nondefault setting is absent from configuration, applying the next plan can drop and readd the field index to restore the default. Declare the observed value to retain it. For upgrades from providers 0.0.6, 0.1.0 and 0.1.1, including changes to numeric and boolean `sort`, see the [upgrade guide](upgrading#field-defaults).
 
 ### Field tokenization
 
