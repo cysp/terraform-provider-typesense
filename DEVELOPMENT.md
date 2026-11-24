@@ -58,7 +58,7 @@ To check reproducibility, repeat full generation and the status check in a clean
 ## Documentation verification
 
 ```sh
-go tool tfplugindocs validate --provider-name=terraform-provider-typesense
+go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-name=terraform-provider-typesense
 git diff --check
 ```
 
