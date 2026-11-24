@@ -1,20 +1,17 @@
 # Development
 
-Use Go from `go.mod`, Terraform 1.15 or 1.16, the official golangci-lint release from `.golangci-lint-version`, and GoReleaser from `.tool-versions`. Go tools, including tfplugindocs and gofumpt, are pinned in `go.mod`.
+Use Go and tfplugindocs from `go.mod`, Terraform 1.15 or 1.16, the official golangci-lint release from `.golangci-lint-version`, and GoReleaser from `.tool-versions`.
 
 ```sh
 go mod download
 golangci-lint config verify
 golangci-lint run
 golangci-lint fmt --diff
-formatting_diff="$(go tool gofumpt -d .)"
-printf '%s\n' "$formatting_diff"
-test -z "$formatting_diff"
 go test -race -shuffle=on -count=1 -timeout=10m ./...
 goreleaser check
 ```
 
-Apply formatting with `golangci-lint fmt` and `go tool gofumpt -w .`. Run both checks using the pinned tool versions. The gofumpt diff command does not fail on differences, so CI checks its output explicitly.
+Apply formatting with `golangci-lint fmt`.
 
 ## Documentation
 
