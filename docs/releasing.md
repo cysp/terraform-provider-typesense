@@ -112,9 +112,11 @@ comparison boundary.
   Deploy that policy before enabling preparation. The
   [token step](../.github/workflows/release-please.yml) specifies
   the endpoint and broker-requested scopes for the installation access token.
-- Keep `RELEASE_GPG_PRIVATE_KEY` and `RELEASE_PASSPHRASE` in `release`, and
-  [register the signing key](https://developer.hashicorp.com/terraform/registry/providers/publishing#preparing-and-adding-a-signing-key)
-  with the Registry. Live acceptance uses disposable Typesense service containers. See [Tests](../DEVELOPMENT.md#tests).
+- The publisher uses the repository secrets `GPG_PRIVATE_KEY` and `PASSPHRASE`
+  for the [signing key registered with the Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing#preparing-and-adding-a-signing-key).
+  The `release` environment restricts the publisher to version tags. Other eligible
+  workflows can also reference repository secrets. Live acceptance uses disposable
+  Typesense service containers. See [Tests](../DEVELOPMENT.md#tests).
 - When bootstrapping, set the Release Please version manifest,
   `.release-please-manifest.json`, to the last published version. Inspect the first
   release PR and its checks before approving a release.
