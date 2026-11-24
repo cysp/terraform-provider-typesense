@@ -14,7 +14,6 @@ linters:
   settings:
     cyclop:
       max-complexity: 20
-      package-average: 0
     varnamelen:
       ignore-names:
         - i
@@ -31,22 +30,14 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
     rules:
       - linters:
           - revive
-        path: "util/*"
-        text: "var-naming: avoid meaningless package names"
-      - linters:
-          - revive
-        path: ".*_test.go"
+        path: '_test\.go$'
         text: "dot-imports: should not use dot imports"
       - linters:
           - gochecknoglobals
-        path: ".*_test.go"
+        path: '_test\.go$'
 
 issues:
   max-issues-per-linter: 0
@@ -55,12 +46,5 @@ issues:
 formatters:
   enable:
     - gci
-    - gofmt
     - gofumpt
     - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
