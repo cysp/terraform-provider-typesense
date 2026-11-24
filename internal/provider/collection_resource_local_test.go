@@ -16,7 +16,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestAccCollectionResourceLocal(t *testing.T) {
+func TestAccCollectionResourceCreateUpdateDelete(t *testing.T) {
 	t.Parallel()
 
 	collections := map[string]typesense_api.CollectionResponse{}

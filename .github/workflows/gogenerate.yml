@@ -22,7 +22,7 @@ jobs:
       - run: go generate ./...
 
       - run: >-
-          go tool tfplugindocs
+          go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
           validate --provider-name=terraform-provider-typesense
 
       - run: |
