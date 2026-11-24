@@ -46,12 +46,7 @@ func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequ
 	var data CollectionModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	resp.Diagnostics.Append(validatePlannedFallbackFieldConfig(ctx, req.Config, data.Fields)...)
-	resp.Diagnostics.Append(validatePlannedDynamicOptional(ctx, data)...)
-
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(warnResolvedFieldTokenOverrides(ctx, req.Config, data)...)
-	}
+	resp.Diagnostics.Append(validateCollectionMutation(ctx, req.Config, data, data.EnableNestedFields.ValueBoolPointer())...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -128,12 +123,6 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	var data CollectionModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	resp.Diagnostics.Append(validatePlannedFallbackFieldConfig(ctx, req.Config, data.Fields)...)
-	resp.Diagnostics.Append(validatePlannedDynamicOptional(ctx, data)...)
-
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(warnResolvedFieldTokenOverrides(ctx, req.Config, data)...)
-	}
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -181,6 +170,14 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading collection before update", err.Error())
 
+		return
+	}
+
+	// Nesting is immutable on an existing collection. A computed plan value
+	// can be unknown even when the collection's nesting setting is known.
+	resp.Diagnostics.Append(validateCollectionMutation(ctx, req.Config, data, current.EnableNestedFields)...)
+
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
