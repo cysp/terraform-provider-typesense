@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -67,24 +68,36 @@ func TestAccAliasResourceCreateChecksOwnership(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		name   string
-		target string
-		status int
-		want   string
+		name     string
+		target   string
+		statuses []int
+		want     string
 	}{
-		{"same_target", "posts_v1", http.StatusOK, "Alias already exists"},
-		{"different_target", "posts_v2", http.StatusOK, "Alias already exists"},
-		{"forbidden", "", http.StatusForbidden, "Error checking alias before creation"},
+		{"same_target", "posts_v1", []int{http.StatusOK}, "Alias already exists"},
+		{"different_target", "posts_v2", []int{http.StatusOK}, "Alias already exists"},
+		{"temporarily_missing", "posts_v2", []int{http.StatusNotFound, http.StatusOK}, "Alias already exists"},
+		{"forbidden", "", []int{http.StatusForbidden}, "Error checking alias before creation"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
+			var reads, writes atomic.Int32
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				assert.Equal(t, http.MethodGet, req.Method)
+				if req.Method != http.MethodGet {
+					writes.Add(1)
+					http.Error(w, "unexpected write", http.StatusMethodNotAllowed)
+
+					return
+				}
+
 				assert.Equal(t, "/aliases/posts", req.URL.Path)
 
-				if test.status != http.StatusOK {
-					http.Error(w, "Forbidden", test.status)
+				index := int(reads.Add(1)) - 1
+
+				status := test.statuses[min(index, len(test.statuses)-1)]
+				if status != http.StatusOK {
+					http.Error(w, http.StatusText(status), status)
 
 					return
 				}
@@ -100,6 +113,8 @@ func TestAccAliasResourceCreateChecksOwnership(t *testing.T) {
   collection_name = "posts_v1"
 }`, ExpectError: regexp.MustCompile(test.want)}},
 			})
+			assert.EqualValues(t, len(test.statuses), reads.Load())
+			assert.Zero(t, writes.Load())
 		})
 	}
 }

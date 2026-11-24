@@ -13,7 +13,7 @@ import (
 
 func (model *AliasModel) ResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages a Typesense collection alias. Import an existing alias before managing it, even if it already points to the desired collection. Changing its target updates the alias in place. Coordinate concurrent writers because Typesense uses separate lookup and upsert requests.",
+		MarkdownDescription: "Manages a Typesense collection alias. Import an existing alias before managing it, even if it already points to the desired collection. When the first lookup reports the alias missing, creation checks again over five seconds before sending the upsert. Coordinate concurrent writers because the lookup and upsert are separate requests. Changing the target of a managed alias updates it in place.",
 		Attributes:          model.ResourceSchemaAttributes(ctx),
 	}
 }

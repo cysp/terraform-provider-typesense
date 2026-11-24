@@ -60,7 +60,7 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	name := data.Name.ValueString()
 
-	_, err := r.providerData.client.Alias(name).Retrieve(ctx)
+	_, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Alias(name).Retrieve)
 	if err == nil {
 		resp.Diagnostics.AddError("Alias already exists", fmt.Sprintf("Import the existing Typesense alias %q before managing it with this resource.", name))
 
