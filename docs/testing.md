@@ -1,0 +1,130 @@
+# Testing
+
+## Suite layout
+
+| Location | Purpose |
+| --- | --- |
+| `internal/provider/*_test.go` | Provider model, schema, protocol, and lifecycle tests |
+| `internal/provider/util/*_test.go` | Provider utility behavior |
+
+Use `Test<Subject><Behavior>` for ordinary tests. Name comparable acceptance
+scenarios `TestAcc<Subject>Resource<Scenario>` or
+`TestAcc<Subject>DataSource<Scenario>`.
+Keep combined resource contracts named for their shared concern. Spell acronyms
+as `ID`, `API`, `HTTP`, `JSON`, and `JWK`, and use `RoundTrip` consistently. Name table cases
+after inputs or expected behavior so `go test -run` can select them. Use named
+table fields for behavior; do not branch on the case name or derive expected
+results from the implementation being tested.
+
+Use external test packages for exported behavior. When tests need unexported symbols, keep the symbols private and put the tests in the implementation package, conventionally in `*_internal_test.go`. Keep test-specific helpers beside their callers. Use `*_support_test.go` for shared setup and name larger fixtures, fault injectors, and recorders for their purpose.
+
+## Go test structure
+
+Run independent tests in parallel. Serialize live schema alterations on each disposable Typesense server. Register server cleanup when the server starts. Use a separate bounded context for cleanup requests because Go cancels `t.Context()` before cleanup runs.
+
+Record HTTP handler and worker errors and check them in the test goroutine after the workers finish. Synchronize on events or use controlled clocks for timing-sensitive tests. See the [Go testing package](https://pkg.go.dev/testing) and [test review guidance](https://go.dev/wiki/TestComments).
+
+## Terraform acceptance tests
+
+Acceptance tests run Terraform CLI through `resource.Test`. Use an isolated HTTP fixture for provider behavior and a disposable Typesense server for real-service behavior. A provider factory creates a fresh provider instance per invocation.
+
+Choose checks for the behavior being proved:
+
+- Use `ConfigStateChecks`, `statecheck.ExpectKnownValue`, `knownvalue`, and
+  `tfjsonpath` for typed state assertions. Distinguish null, empty collections,
+  strings, numbers, and booleans. Prefer exact nested values when the whole
+  collection is part of the contract. Terraform already checks configured
+  values against the plan; additional assertions are most useful for computed
+  values, defaults, normalization, and regression boundaries.
+- Use `statecheck.CompareValue(compare.ValuesSame())` across steps to prove a
+  computed identity survives an update, or `CompareValuePairs` for related
+  resources. Create each comparison inside its test so it cannot retain values
+  from other tests.
+- Use `ConfigPlanChecks` and `plancheck.ExpectResourceAction` for create,
+  update, replacement, and no-op behavior. Keep checks at the phase where they
+  matter: before apply for planned actions, after refresh for observed drift.
+  The library already rejects an unexpected non-empty final plan.
+- Verify CLI import using `ImportStateVerify` against prior applied state when
+  possible. For pre-existing remote fixtures, persist imported state and use a
+  following configuration step to check its values and plan. CLI import steps
+  run `ImportStateCheck`, not `Check` or `ConfigStateChecks`.
+- Import-block steps selected through `ImportStateKind` only plan the import;
+  they do not apply it or run `ImportStateCheck`, `ImportStateVerify`, `Check`,
+  or `ConfigStateChecks`. Use `ImportPlanChecks.PreApply` to inspect the planned
+  values. To verify persisted state after applying an import block, put the
+  block in a normal configuration step and use `ConfigStateChecks`.
+- Keep `ImportStateVerifyIgnore` narrow and explain why each value cannot be
+  read during import, such as a write-only secret or a configured timeout.
+  Cover the import mechanism the provider supports, including resource
+  identity where applicable.
+- Keep legacy `Check` callbacks when they inspect exact HTTP lifecycle
+  observations or run during `RefreshState`, which does not execute
+  `ConfigStateChecks`. `CheckDestroy` also uses the library's legacy callback
+  type. Do not add generic adapters just to hide these supported interfaces.
+
+A create/update scenario should prove the intended state transitions, retained
+identity, and final cleanup. Test external deletion and drift where supported.
+For invalid input, use `ExpectError` to identify the expected diagnostic.
+`ExpectNonEmptyPlan` needs a specific reason; it must not hide accidental drift.
+Check remote absence after destroy when deletion or retention is the behavior under test.
+
+HTTP request and response oracles remain separate evidence from Terraform
+state. Assert exact payload contents, and lifecycle ordering.
+Construct valid JSON fixtures and expected payloads as Go objects and encode them
+with the standard library. Author expected objects independently of production
+conversion code and response fixtures. Preserve omitted members, explicit null,
+empty collections, and zero values; mutate objects before encoding instead of
+editing JSON substrings. Small package-local test helpers can handle encoding
+and intentional response mutation without defining a fixture framework.
+
+Retain raw strings when malformed JSON, duplicate keys, escaping, whitespace,
+key order, or exact bytes are the behavior under test. In semantic-equality tests,
+keep the planned and returned representations distinct so canonical encoding
+does not erase the condition being tested. Keep HCL configuration expressions
+separate from JSON fixture encoding.
+
+A mocked acceptance pass proves behavior against the local API model; only a
+live test or primary API evidence establishes Typesense compatibility.
+
+See HashiCorp's [state checks](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/state-checks/resource),
+[plan checks](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/plan-checks),
+and [test step reference](https://pkg.go.dev/github.com/hashicorp/terraform-plugin-testing/helper/resource#TestStep).
+
+## Reviewing test consolidation
+
+When removing or combining tests, account for each affected behavior and lifecycle
+transition in the pull request or review. Judge each check by the concrete faults
+it detects and its maintenance cost, independently of how assertions are grouped.
+Compare narrower ways to preserve useful protection before retiring it with
+brittle setup or unrelated assertions. Identify replacement evidence for retained
+guarantees and justify consequential coverage deliberately relinquished.
+
+Check replacement evidence at the phase where the behavior occurs: importing a
+value does not prove Create writes it, and checking state after refresh does not
+prove import produced it. A focused check can establish a particular property
+without proving the whole workflow.
+
+Use a targeted negative control when replacement coverage is uncertain. To claim
+regression detection, exercise the faulty behavior with unchanged expectations
+and confirm the relevant failure and restored pass. Altering an expected value
+shows that an assertion executes; report that narrower result. Keep this evidence
+with the change rather than maintaining a separate coverage inventory.
+
+## Terraform fixtures
+
+Use `config.TestNameDirectory()` for a fixture owned by one test and
+`config.TestStepDirectory()` when successive steps need separate files. Use
+`config.StaticDirectory()` when several scenarios deliberately share a
+fixture. Keep variables in `ConfigVariables` with `config.StringVariable`,
+`config.BoolVariable`, and other typed constructors. For short HCL helpers,
+use numbered format verbs and `%q` for quoted strings.
+
+Rename test-name-based fixture directories with their tests. Format changed fixtures with `terraform fmt`. See HashiCorp's [configuration reference](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/configuration).
+
+To test whether the current provider can read or upgrade older state, use a
+saved state fixture captured with synthetic data. Record which release produced
+it. When a test needs to run an earlier provider, pin that release in its test
+configuration.
+
+For commands, prerequisites, CLI selection, server isolation, and CI coverage,
+see [Development: Tests](../DEVELOPMENT.md).
