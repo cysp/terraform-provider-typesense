@@ -17,7 +17,7 @@ import (
 	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestCollectionSchemaDriftAfterPlan(t *testing.T) {
+func TestAccCollectionSchemaDriftAfterPlan(t *testing.T) {
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -80,7 +80,7 @@ func TestCollectionSchemaDriftAfterPlan(t *testing.T) {
 				plannedFields  []api.Field
 			)
 
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 				{Config: config(false)},
 				{Config: config(true), ExpectError: expectedError, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate),

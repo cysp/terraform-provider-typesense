@@ -18,6 +18,7 @@ import (
 )
 
 func TestAccKeyPermissionsAndRotation(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	prefix := "keytest_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)

@@ -13,7 +13,7 @@ import (
 	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestCollectionExpansionAdoption(t *testing.T) {
+func TestAccCollectionExpansionAdoptionMocked(t *testing.T) {
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -55,7 +55,6 @@ func TestCollectionExpansionAdoption(t *testing.T) {
 			}
 
 			resource.Test(t, resource.TestCase{
-				IsUnitTest:               true,
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{Config: original},

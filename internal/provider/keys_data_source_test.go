@@ -37,7 +37,7 @@ func TestKeysDataSourceSchema(t *testing.T) {
 	}
 }
 
-func TestKeysDataSource(t *testing.T) {
+func TestAccKeysDataSourceMocked(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
@@ -79,12 +79,13 @@ func TestKeysDataSource(t *testing.T) {
 				step.ConfigStateChecks = []statecheck.StateCheck{statecheck.ExpectKnownValue("data.typesense_keys.test", tfjsonpath.New("keys"), test.expected)}
 			}
 
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{step}})
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{step}})
 		})
 	}
 }
 
 func TestAccKeysDataSource(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{

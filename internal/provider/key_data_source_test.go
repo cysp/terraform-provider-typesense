@@ -7,6 +7,7 @@ import (
 )
 
 func TestAccKeyDataSource(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{

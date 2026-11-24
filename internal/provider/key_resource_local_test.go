@@ -16,7 +16,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestKeyResourceLocal(t *testing.T) {
+func TestAccKeyResourceLocal(t *testing.T) {
 	t.Parallel()
 
 	keys := map[int64]typesense_api.ApiKey{}
@@ -29,7 +29,6 @@ func TestKeyResourceLocal(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

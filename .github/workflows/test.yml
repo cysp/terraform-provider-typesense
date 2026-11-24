@@ -1,10 +1,10 @@
 name: test
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -15,38 +15,84 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: "go.mod"
+          cache: true
+
       - run: go build -v .
-      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
-        with:
-          version-file: .tool-versions
-          args: check
 
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: "go.mod"
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+          cache: true
+
+      - run: go test -race -shuffle=on -count=1 -timeout=10m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./... 2>&1 | tee "$RUNNER_TEMP/ordinary-tests.log"
+        shell: bash
+        env:
+          RAPID_CHECKS: "1000"
+        timeout-minutes: 12
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
         with:
-          terraform_version: "1.16.*"
-          terraform_wrapper: false
-      - run: go test -race -shuffle=on -count=1 -timeout=10m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-        timeout-minutes: 10
+          name: ordinary-test-failures
+          path: |
+            ${{ runner.temp }}/ordinary-tests.log
+            **/testdata/rapid/**/*.fail
+          retention-days: 7
+          if-no-files-found: ignore
+
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: test
 
-  testacc_matrix:
+  testaccmocked:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+          - "1.15.*"
+          - "1.16.*"
+          - "1.17.*"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+
+      - run: go test -count=1 -timeout=15m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... -run '^TestAcc' ./internal/provider/
+        env:
+          TF_ACC: "1"
+          TF_ACC_MOCKED: "1"
+        timeout-minutes: 20
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: testaccmocked-${{ matrix.terraform }}
+
+  testacc:
     name: testacc (Terraform ${{ matrix.terraform }}, Typesense ${{ matrix.typesense }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -76,23 +122,13 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - run: go test -count=1 -parallel=1 -timeout=10m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./internal/provider/
+      - run: go test -count=1 -parallel=1 -timeout=15m -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... -run '^TestAcc' ./internal/provider/
         env:
           TF_ACC: "1"
           TYPESENSE_URL: "http://localhost:${{ job.services.typesense.ports['8108'] }}"
           TYPESENSE_API_KEY: "12345"
-        timeout-minutes: 10
+        timeout-minutes: 20
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: testacc-${{ matrix.terraform }}-${{ matrix.typesense }}
-
-  testacc:
-    name: testacc
-    runs-on: ubuntu-latest
-    if: always()
-    needs: testacc_matrix
-    steps:
-      - env:
-          ACCEPTANCE_RESULT: ${{ needs.testacc_matrix.result }}
-        run: test "$ACCEPTANCE_RESULT" = success

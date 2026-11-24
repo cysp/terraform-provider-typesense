@@ -9,6 +9,7 @@ import (
 )
 
 func TestAccKeyResource(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -94,6 +95,7 @@ func TestAccKeyResource(t *testing.T) {
 }
 
 func TestAccKeyResourceImport(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -123,6 +125,7 @@ func TestAccKeyResourceImport(t *testing.T) {
 }
 
 func TestAccKeyResourceDeleted(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{

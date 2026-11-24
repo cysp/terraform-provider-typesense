@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccCollectionNativeDynamicExpansions(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -53,6 +54,7 @@ func TestAccCollectionNativeDynamicExpansions(t *testing.T) {
 }
 
 func TestAccCollectionTypedNestedExpansionDrift(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, setting := range []string{"type", "facet"} {

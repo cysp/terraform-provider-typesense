@@ -19,7 +19,7 @@ import (
 )
 
 // The decoded scoped-key payload starts after the 44-byte base64 digest and four-byte parent prefix.
-func TestGenerateScopedSearchKeyFunction(t *testing.T) {
+func TestAccGenerateScopedSearchKeyFunctionMocked(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct{ name, params, json string }{
@@ -31,7 +31,7 @@ func TestGenerateScopedSearchKeyFunction(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
 				Config:            fmt.Sprintf(`output "params" { value=substr(base64decode(provider::typesense::generate_scoped_search_key("abcdef",%s)),48,-1) }`, test.params),
 				ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectKnownOutputValue("params", knownvalue.StringExact(test.json))},
 			}}})
@@ -39,17 +39,17 @@ func TestGenerateScopedSearchKeyFunction(t *testing.T) {
 	}
 }
 
-func TestGenerateScopedSearchKeyFunctionVector(t *testing.T) {
+func TestAccGenerateScopedSearchKeyFunctionVector(t *testing.T) {
 	t.Parallel()
 
 	expected := base64.StdEncoding.EncodeToString([]byte(`iy27OvahxUoH+TD/dNy4fNYc6S7Zjt+W/v0bKs6ugcE=abcd{"another":["1",2],"scope":"foo","something":"123","yetanother":{"a":1,"b":[2,"3"]}}`))
-	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
 		Config:            `output "key" { value=provider::typesense::generate_scoped_search_key("abcdef",{scope="foo",something="123",another=["1",2],yetanother={a=1,b=[2,"3"]}}) }`,
 		ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectKnownOutputValue("key", knownvalue.StringExact(expected))},
 	}}})
 }
 
-func TestGenerateScopedSearchKeyFunctionInvalid(t *testing.T) {
+func TestAccGenerateScopedSearchKeyFunctionInvalid(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct{ name, key, params, pattern string }{
@@ -62,16 +62,16 @@ func TestGenerateScopedSearchKeyFunctionInvalid(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
 				Config: fmt.Sprintf(`output "key" { value=provider::typesense::generate_scoped_search_key(%s,%s) }`, test.key, test.params), ExpectError: regexp.MustCompile(test.pattern),
 			}}})
 		})
 	}
 }
 
-func TestGenerateScopedSearchKeyFunctionUnknown(t *testing.T) {
+func TestAccGenerateScopedSearchKeyFunctionUnknown(t *testing.T) {
 	t.Parallel()
-	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
 		Config: `resource "terraform_data" "input" { input={key="abcdef",tenant="one"} }
 output "params" { value=substr(base64decode(provider::typesense::generate_scoped_search_key(terraform_data.input.output.key,{filter_by="tenant_id:=${terraform_data.input.output.tenant}"})),48,-1) }
 output "nested_unknown" { value=substr(base64decode(provider::typesense::generate_scoped_search_key("abcdef",{filter_by="tenant_id:=${terraform_data.input.output.tenant}"})),48,-1) }`,
@@ -80,6 +80,7 @@ output "nested_unknown" { value=substr(base64decode(provider::typesense::generat
 }
 
 func TestAccGenerateScopedSearchKeyFunction(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -146,9 +147,9 @@ output "key" {
 	}}})
 }
 
-func TestGenerateScopedSearchKeyFunctionMinimumParent(t *testing.T) {
+func TestAccGenerateScopedSearchKeyFunctionMinimumParent(t *testing.T) {
 	t.Parallel()
-	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{
 		Config:            `output "key" { value=provider::typesense::generate_scoped_search_key("abcd",{}) }`,
 		ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectKnownOutputValue("key", knownvalue.StringExact("OFc2NHh4S0YwN0s0YWwvQ0ljZThyblFrTGQ4SXVKOG9UOG81UCtoa2JiOD1hYmNke30="))},
 	}}})

@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccUpgradeDynamicFieldsFromReleasedProvider(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, refreshed := range []bool{false, true} {

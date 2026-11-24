@@ -17,6 +17,7 @@ import (
 )
 
 func TestAccCollectionExactSchema(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -71,6 +72,7 @@ func TestAccCollectionExactSchema(t *testing.T) {
 }
 
 func TestAccCollectionIgnoreFields(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct{ name, pattern, kind string }{{"regex", "(?!private_).*", "string"}, {"named_auto", "public_title", "auto"}} {
@@ -110,6 +112,7 @@ func TestAccCollectionIgnoreFields(t *testing.T) {
 }
 
 func TestAccCollectionInferredFieldsAfterAlteration(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)

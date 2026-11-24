@@ -21,6 +21,7 @@ import (
 )
 
 func TestAccCollectionSchemaLifecycle(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -86,6 +87,7 @@ func TestAccCollectionSchemaLifecycle(t *testing.T) {
 }
 
 func TestAccCollectionExternalDrift(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -129,6 +131,7 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 }
 
 func TestAccCollectionExplicitNestedFields(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -174,6 +177,7 @@ func TestAccCollectionExplicitNestedFields(t *testing.T) {
 }
 
 func TestAccCollectionExplicitFieldRediscovery(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -209,6 +213,7 @@ func TestAccCollectionExplicitFieldRediscovery(t *testing.T) {
 }
 
 func TestAccCollectionRemovalRetainsExplicitField(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct {
@@ -274,6 +279,7 @@ func TestAccCollectionRemovalRetainsExplicitField(t *testing.T) {
 }
 
 func TestAccCollectionExpansionAdoption(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, scenario := range []struct {
