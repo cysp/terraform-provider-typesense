@@ -75,6 +75,7 @@ require (
 	github.com/oapi-codegen/runtime v1.9.1 // indirect
 	github.com/oklog/run v1.2.0 // indirect
 	github.com/posener/complete v1.2.3 // indirect
+	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/sergi/go-diff v1.4.5 // indirect
 	github.com/shopspring/decimal v1.6.0 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
@@ -103,10 +104,6 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	mvdan.cc/gofumpt v0.12.0 // indirect
 )
 
-tool (
-	github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
-	mvdan.cc/gofumpt
-)
+tool github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs

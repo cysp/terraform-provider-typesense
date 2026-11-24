@@ -46,6 +46,8 @@ issues:
 formatters:
   enable:
     - gci
+    - gofmt
+    - gofumpt
     - goimports
   exclusions:
     generated: lax

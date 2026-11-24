@@ -23,8 +23,3 @@ jobs:
           version-file: .golangci-lint-version
 
       - run: golangci-lint fmt --diff
-
-      - run: |
-          formatting_diff="$(go tool gofumpt -d .)"
-          printf '%s\n' "$formatting_diff"
-          test -z "$formatting_diff"
