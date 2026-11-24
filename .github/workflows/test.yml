@@ -90,7 +90,6 @@ jobs:
           flags: testaccmocked-${{ matrix.terraform }}
 
   testacc:
-    name: testacc (Terraform ${{ matrix.terraform }}, Typesense ${{ matrix.typesense }})
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
