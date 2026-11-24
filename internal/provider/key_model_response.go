@@ -11,26 +11,39 @@ import (
 const keyPrefixLength = 4
 
 func (model *KeyModel) ReadFromResponse(ctx context.Context, apiKey *KeyResponse) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	model.ID = types.Int64PointerValue(apiKey.Id)
-	model.Description = types.StringValue(apiKey.Description)
-
-	model.Actions = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Actions))(&diags)
-	model.Collections = util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, apiKey.Collections))(&diags)
-
-	model.Autodelete = types.BoolPointerValue(apiKey.Autodelete)
-
-	model.ExpiresAt = types.Int64PointerValue(apiKey.ExpiresAt)
+	metadata, diags := keyMetadataFromResponse(ctx, apiKey)
+	model.ID = metadata.ID
+	model.Description = metadata.Description
+	model.Actions = metadata.Actions
+	model.Collections = metadata.Collections
+	model.Autodelete = metadata.Autodelete
+	model.ExpiresAt = metadata.ExpiresAt
 
 	if apiKey.Value != nil {
 		model.Value = types.StringPointerValue(apiKey.Value)
 		model.ValuePrefix = types.StringValue((*apiKey.Value)[:min(keyPrefixLength, len(*apiKey.Value))])
 	}
 
-	if apiKey.ValuePrefix != nil {
-		model.ValuePrefix = types.StringPointerValue(apiKey.ValuePrefix)
+	if !metadata.ValuePrefix.IsNull() {
+		model.ValuePrefix = metadata.ValuePrefix
 	}
 
 	return diags
+}
+
+func keyMetadataFromResponse(ctx context.Context, key *KeyResponse) (KeyDataSourceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	actions := util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, key.Actions))(&diags)
+	collections := util.DiagnosticsAppender(types.ListValueFrom(ctx, types.StringType, key.Collections))(&diags)
+
+	return KeyDataSourceModel{
+		ID:          types.Int64PointerValue(key.Id),
+		Description: types.StringValue(key.Description),
+		Actions:     actions,
+		Collections: collections,
+		Autodelete:  types.BoolPointerValue(key.Autodelete),
+		ExpiresAt:   types.Int64PointerValue(key.ExpiresAt),
+		ValuePrefix: types.StringPointerValue(key.ValuePrefix),
+	}, diags
 }

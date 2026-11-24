@@ -84,6 +84,33 @@ func TestAccKeysDataSourceMocked(t *testing.T) {
 	}
 }
 
+func TestAccKeyDataSourcesReadOnlyServerPrefix(t *testing.T) {
+	t.Parallel()
+
+	key := map[string]any{"id": 7, "value": "fixture", "actions": []string{}, "collections": []string{}}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /keys/7", func(w http.ResponseWriter, _ *http.Request) { writeJSON(t, w, http.StatusOK, key) })
+	mux.HandleFunc("GET /keys", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, http.StatusOK, map[string]any{"keys": []any{key}})
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			Config: providerConfig(server.URL) + `
+data "typesense_key" "test" { id = 7 }
+data "typesense_keys" "test" {}
+`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("data.typesense_key.test", tfjsonpath.New("value_prefix"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("data.typesense_keys.test", tfjsonpath.New("keys").AtSliceIndex(0).AtMapKey("value_prefix"), knownvalue.Null()),
+			},
+		}},
+	})
+}
+
 func TestAccKeysDataSource(t *testing.T) {
 	requireLiveAcceptance(t)
 	t.Parallel()
