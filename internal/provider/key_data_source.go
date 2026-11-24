@@ -36,9 +36,9 @@ func (d *keyDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data KeyModel
+	var keyID types.Int64
 
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("id"), &data.ID)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("id"), &keyID)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -47,18 +47,23 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx, cancel := context.WithTimeout(ctx, defaultOperationTimeout)
 	defer cancel()
 
-	keyID := data.ID.ValueInt64()
-
-	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) { return d.providerData.keys.retrieve(ctx, keyID) })
+	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) {
+		return d.providerData.keys.retrieve(ctx, keyID.ValueInt64())
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
 	}
 
-	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+	metadata, diags := keyMetadataFromResponse(ctx, retrievedAPIKey)
+	resp.Diagnostics.Append(diags...)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &KeyDataSourceModel{ID: data.ID, Description: data.Description, Actions: data.Actions, Collections: data.Collections, Autodelete: data.Autodelete, ExpiresAt: data.ExpiresAt, ValuePrefix: data.ValuePrefix})...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &metadata)...)
 }
 
 // KeyDataSourceModel describes metadata returned by the key retrieval API.

@@ -64,9 +64,10 @@ func (d *keysDataSource) Read(ctx context.Context, _ datasource.ReadRequest, res
 
 	data := KeysModel{Keys: make([]KeyDataSourceModel, 0, len(keys))}
 	for _, key := range keys {
-		var model KeyModel
-		resp.Diagnostics.Append(model.ReadFromResponse(ctx, key)...)
-		data.Keys = append(data.Keys, KeyDataSourceModel{ID: model.ID, Description: model.Description, Actions: model.Actions, Collections: model.Collections, Autodelete: model.Autodelete, ExpiresAt: model.ExpiresAt, ValuePrefix: model.ValuePrefix})
+		metadata, diags := keyMetadataFromResponse(ctx, key)
+		resp.Diagnostics.Append(diags...)
+
+		data.Keys = append(data.Keys, metadata)
 	}
 
 	if resp.Diagnostics.HasError() {
