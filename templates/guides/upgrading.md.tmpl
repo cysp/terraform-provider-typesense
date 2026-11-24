@@ -32,13 +32,19 @@ Provider 0.0.6 sent and recorded `sort = false` when it was omitted, including f
 
 The provider now manages `store`, `range_index`, `stem`, `stem_dictionary`, field `token_separators` and `symbols_to_index`, and vector `vec_dist`. If an existing or imported field has a nondefault setting, omitting it from configuration plans a reset to the Typesense default. Declare the observed setting to retain it, and review any reset before applying. Changes to `store` affect later document writes; values omitted from stored documents are not restored by setting `store = true`. See the [field defaults and storage guidance](collection-lifecycle#field-defaults-and-upgrades).
 
+### Inferred fields
+
 The provider manages every field returned by Typesense, including concrete fields inferred from document ingestion. On refresh, fields missing from configuration appear as drift. An unchanged configuration can therefore plan an in-place update that removes existing indexes, whether or not provider 0.0.6 previously recorded those fields in state.
 
 To retain those indexes, declare every field you intend to keep with its observed settings before applying. Dynamic rules do not exempt inferred fields from this requirement. If another system should manage fields after creation, `ignore_changes = [fields]` in the resource lifecycle opts out of all field updates, including configured changes. See the lifecycle guide for that tradeoff. Alternatively, migrate through a new collection and alias cutover.
 
+A named `auto` or `string*` declaration can share its name with one concrete inferred field. Declare both rows to retain and manage the pair; other duplicate field names remain invalid.
+
 If you apply the removals, stored document values survive, but the affected fields stop being searchable until they are indexed again. Remaining dynamic rules can rediscover them on subsequent document writes, producing further drift; existing documents are not automatically rewritten.
 
-Typesense 29.1 rejects adding or modifying reference fields on an existing collection. Use a new collection or upgrade Typesense to 30.2 for those changes. The provider does not automatically replace the collection in response to this API rejection.
+### Dynamic declarations
+
+Omitted `optional` now resolves to `true` for names containing `.*` and types `auto` or `string*`. An older dynamic field recorded as `optional = false` can therefore plan an alteration. The [dynamic rule guidance](collection-lifecycle#dynamic-rule-alterations) describes which declarations can explicitly retain `false`, the exact fallback's ignored options, and changes that require separate applies.
 
 ## Supported versions and state
 

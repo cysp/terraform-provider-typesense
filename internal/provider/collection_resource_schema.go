@@ -44,7 +44,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
-						MarkdownDescription: "Field name or dynamic pattern. Do not declare the reserved `id` field; Typesense manages it automatically and omits it from collection schemas.",
+						MarkdownDescription: "Field name or dynamic pattern. Do not declare the reserved `id` field; Typesense manages it automatically and omits it from collection schemas. A named `auto` or `string*` declaration may share its name with one concrete field; other duplicate names are invalid.",
 						Required:            true,
 					},
 					"type": schema.StringAttribute{
@@ -82,10 +82,12 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 						Optional:            true,
 					},
 					"optional": schema.BoolAttribute{
-						MarkdownDescription: "Whether documents may omit this field. Defaults to false; set true for dynamic fields.",
+						MarkdownDescription: "Whether documents may omit this field. Defaults to true for dynamic fields and false for other fields. Non-nested dynamic fields require true; with nested fields enabled, object/object[] fields and dotted names without .* may set false.",
 						Optional:            true,
 						Computed:            true,
-						Default:             booldefault.StaticBool(false),
+						PlanModifiers: []planmodifier.Bool{
+							collectionOptionalPlanModifier{},
+						},
 					},
 					"reference": schema.StringAttribute{
 						MarkdownDescription: "Referenced collection and field for joins. Omit for a field without a reference; an explicit empty string is invalid.",
