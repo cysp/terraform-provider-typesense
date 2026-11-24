@@ -13,6 +13,10 @@ goreleaser check
 
 Apply formatting with `golangci-lint fmt`.
 
+## Vulnerability checks
+
+Run the pinned `go run` command in the [govulncheck workflow](.github/workflows/govulncheck.yml) from the repository root with the Go version in `go.mod`. The scanner uses the current Go vulnerability database.
+
 ## Documentation
 
 Edit schema descriptions, `templates/`, and `examples/`, then regenerate:
