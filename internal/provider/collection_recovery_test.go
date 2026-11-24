@@ -1,6 +1,7 @@
 package provider_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -92,4 +93,53 @@ func TestAccCollectionOverlappingAlterationSendsNoMutation(t *testing.T) {
 	}})
 	require.Zero(t, mutations.Load())
 	require.Empty(t, collections)
+}
+
+func TestAccCollectionResourceCredentialBackedEmbeddingAlteration(t *testing.T) {
+	t.Parallel()
+
+	var (
+		existing api.CollectionResponse
+		patches  atomic.Int32
+	)
+
+	require.NoError(t, json.Unmarshal([]byte(`{"name":"posts","fields":[
+		{"name":"title","type":"string","facet":false,"index":true,"infix":false,"locale":"","optional":false,"sort":false},
+		{"name":"embedding","type":"float[]","num_dim":3,"facet":false,"index":true,"infix":false,"locale":"","optional":true,"sort":false,
+		 "embed":{"from":["title"],"model_config":{"model_name":"openai/example","api_key":"abcde*****"}}}
+	]}`), &existing))
+
+	collections := map[string]api.CollectionResponse{"posts": existing}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodPatch {
+			patches.Add(1)
+		}
+
+		handleLocalCollectionRequest(t, collections, w, req)
+	}))
+	t.Cleanup(server.Close)
+
+	config := providerConfig(server.URL) + `resource "typesense_collection" "test" {
+  name = "posts"
+  fields = [
+    {name = "title", type = "string", facet = false},
+    {name = "embedding", type = "float[]", num_dim = 3, optional = true},
+  ]
+}`
+	unrelated := strings.Replace(config, "facet = false", "facet = true", 1)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: config + `
+import {
+  to = typesense_collection.test
+  id = "posts"
+}`},
+			{Config: unrelated},
+			{Config: strings.Replace(unrelated, "optional = true", "optional = false", 1), ExpectError: regexp.MustCompile("Cannot reindex embedding field")},
+			{Config: strings.Replace(unrelated, `{name = "embedding", type = "float[]", num_dim = 3, optional = true},`, "", 1)},
+		},
+	})
+	require.EqualValues(t, 2, patches.Load(), "only the unrelated change and the explicit field removal should send a PATCH")
 }

@@ -217,18 +217,33 @@ func isCollectionDynamicField(field api.Field) bool {
 	return strings.Contains(field.Name, ".*") || slices.Contains([]string{"auto", "string*"}, field.Type)
 }
 
-// Typesense restores original descendants when adding a nested parent. Combining
-// that restoration with explicit child changes can fail after changing schema.
-func validateCollectionAlteration(current *api.CollectionResponse, changes []api.Field) diag.Diagnostics {
-	if current.EnableNestedFields == nil || !*current.EnableNestedFields {
-		return nil
+func hasEmbeddingCredentials(field api.Field) bool {
+	if field.Embed == nil {
+		return false
 	}
 
+	// Typesense masks these model_config properties in collection reads.
+	config := field.Embed.ModelConfig
+
+	return config.ApiKey != nil || config.AccessToken != nil || config.RefreshToken != nil ||
+		config.ClientId != nil || config.ClientSecret != nil || config.ProjectId != nil
+}
+
+func validateCollectionAlteration(current *api.CollectionResponse, changes []api.Field) diag.Diagnostics {
 	for _, field := range changes {
 		if field.Drop != nil && *field.Drop {
 			continue
 		}
 
+		if hasEmbeddingCredentials(field) {
+			return diag.Diagnostics{diag.NewErrorDiagnostic("Cannot reindex embedding field", fmt.Sprintf("Typesense masks embedding credentials when reading field %q. No schema alteration was sent. Apply this field change through Typesense with the original model configuration and credentials, then refresh and review a new Terraform plan.", field.Name))}
+		}
+
+		if current.EnableNestedFields == nil || !*current.EnableNestedFields {
+			continue
+		}
+
+		// Typesense restores original descendants when adding a nested parent.
 		nested := field.Type == "object" || field.Type == "object[]" || (strings.Contains(field.Name, ".") && !strings.Contains(field.Name, ".*"))
 		if !nested {
 			continue

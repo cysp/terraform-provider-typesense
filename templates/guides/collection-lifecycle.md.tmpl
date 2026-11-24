@@ -19,6 +19,8 @@ Typesense 29.1 rejects adding or modifying reference fields on existing collecti
 
 ## Field ownership
 
+Typesense masks credentials in the model configuration of remote embedding fields. If an alteration would drop and re-add one of these fields, the provider stops before sending the alteration. Apply the field change through Typesense with the original model configuration and credentials, then refresh and review a new Terraform plan. You can still change unrelated fields or explicitly remove the embedding field.
+
 Terraform manages the complete field schema returned by Typesense. Each configured field name must be unique. Every observed field belongs in `fields` if its index is to be retained. Fields absent from configuration and differences in configured field settings are reported as drift and reconciled on apply. Removing a field from configuration removes its index, not its stored document values.
 
 This includes concrete fields inferred from `auto`, `string*`, regex rules such as `meta_.*`, and nested object fields. A dynamic rule does not exempt its inferred fields from Terraform management. Document ingestion can therefore produce new drift even when the Terraform configuration has not changed.
