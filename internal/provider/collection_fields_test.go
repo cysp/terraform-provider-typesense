@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stretchr/testify/require"
 	"github.com/typesense/typesense-go/v3/typesense/api"
 )
@@ -47,7 +48,7 @@ func TestCollectionEmbeddingModelConfiguration(t *testing.T) {
 
 			var field api.Field
 			require.NoError(t, json.Unmarshal([]byte(`{"name":"embedding","type":"float[]","embed":{"from":["text"],"model_config":{"model_name":"example","`+property+`":"fixture"}}}`), &field))
-			diags := validateCollectionAlteration(&api.CollectionResponse{}, []api.Field{field})
+			diags := validateCollectionFieldAlteration(&api.CollectionResponse{}, field)
 
 			if property == "indexing_prefix" {
 				require.Empty(t, diags)
@@ -83,7 +84,11 @@ func TestCollectionAlterationBoundary(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			diags := validateCollectionAlteration(&api.CollectionResponse{Fields: test.current, EnableNestedFields: new(test.nested)}, test.changes)
+			var diags diag.Diagnostics
+			for _, field := range test.changes {
+				diags.Append(validateCollectionFieldAlteration(&api.CollectionResponse{Fields: test.current, EnableNestedFields: new(test.nested)}, field)...)
+			}
+
 			if test.rejected {
 				require.True(t, diags.HasError())
 				require.Contains(t, diags[0].Detail(), "while nested field")
