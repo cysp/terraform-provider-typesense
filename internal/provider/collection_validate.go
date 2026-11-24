@@ -91,7 +91,18 @@ func collectionFieldRequiredDynamic(field CollectionFieldModel) bool {
 		isCollectionDynamicField(api.Field{Name: field.Name.ValueString(), Type: field.Type.ValueString()})
 }
 
-func validatePlannedDynamicOptional(ctx context.Context, planned CollectionModel) diag.Diagnostics {
+func validateCollectionMutation(ctx context.Context, config tfsdk.Config, planned CollectionModel, nested *bool) diag.Diagnostics {
+	diags := validatePlannedFallbackFieldConfig(ctx, config, planned.Fields)
+	diags.Append(validatePlannedDynamicOptional(ctx, planned, nested != nil && *nested)...)
+
+	if !diags.HasError() {
+		diags.Append(warnResolvedFieldTokenOverrides(ctx, config, planned)...)
+	}
+
+	return diags
+}
+
+func validatePlannedDynamicOptional(ctx context.Context, planned CollectionModel, nested bool) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if planned.Fields.IsNull() || planned.Fields.IsUnknown() {
@@ -107,7 +118,7 @@ func validatePlannedDynamicOptional(ctx context.Context, planned CollectionModel
 
 	for index, field := range fields {
 		if field.Name.ValueString() != ".*" && collectionFieldRequiredDynamic(field) &&
-			(!planned.EnableNestedFields.ValueBool() || !collectionFieldCanBeNested(field.Name.ValueString(), field.Type.ValueString())) {
+			(!nested || !collectionFieldCanBeNested(field.Name.ValueString(), field.Type.ValueString())) {
 			diags.AddAttributeError(path.Root("fields").AtListIndex(index).AtName("optional"), "Invalid dynamic field optional", collectionDynamicOptionalMessage)
 		}
 	}
@@ -133,7 +144,7 @@ func validateFallbackFieldConfig(field CollectionFieldModel, fieldPath path.Path
 		{"token_separators", field.TokenSeparators},
 		{"symbols_to_index", field.SymbolsToIndex},
 	} {
-		if !option.value.IsNull() {
+		if !option.value.IsNull() && !option.value.IsUnknown() {
 			diags.AddAttributeError(fieldPath.AtName(option.name), "Unsupported fallback field option", "Typesense ignores this option on the exact .* fallback field. Remove it from this field's configuration.")
 		}
 	}
@@ -334,6 +345,10 @@ func validatePlannedFallbackFieldConfig(ctx context.Context, config tfsdk.Config
 
 		if diags.HasError() {
 			return diags
+		}
+
+		if !field.Name.IsUnknown() && !field.Name.Equal(name) {
+			continue
 		}
 
 		field.Name = name
