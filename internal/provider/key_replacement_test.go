@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccKeyAttributeReplacement(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	description := "key attribute replacement"

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestCollectionConfigValidation(t *testing.T) {
+func TestAccCollectionConfigValidation(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct{ name, fields, message string }{
@@ -16,7 +16,7 @@ func TestCollectionConfigValidation(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 				{Config: providerConfig("http://127.0.0.1:1") + `resource "typesense_collection" "test" {
     name="posts"
     fields=` + test.fields + `
@@ -26,9 +26,9 @@ func TestCollectionConfigValidation(t *testing.T) {
 	}
 }
 
-func TestCollectionUnknownFieldName(t *testing.T) {
+func TestAccCollectionUnknownFieldName(t *testing.T) {
 	t.Parallel()
-	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 		{Config: providerConfig("http://127.0.0.1:1") + `resource "terraform_data" "field" {
  input="title"
  }

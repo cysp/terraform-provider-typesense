@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccCollectionResourceDefaults(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	collectionName := "testacc_" + acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum)

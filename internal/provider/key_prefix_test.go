@@ -12,6 +12,7 @@ import (
 )
 
 func TestAccKeyPrefixMetadata(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	for _, length := range []int{3, 4, 5} {

@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stretchr/testify v1.12.1
 	github.com/typesense/typesense-go/v3 v3.2.0
+	pgregory.net/rapid v1.3.0
 )
 
 require (

@@ -13,9 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:gochecknoglobals
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"typesense": providerserver.NewProtocol6WithError(provider.New("test")()),
+}
+
+func requireLiveAcceptance(t *testing.T) {
+	t.Helper()
+
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("set TF_ACC to run acceptance tests")
+	}
+
+	if os.Getenv("TF_ACC_MOCKED") != "" {
+		t.Skip("requires a live Typesense server")
+	}
 }
 
 func providerConfigDynamicValue(config map[string]any) (tfprotov6.DynamicValue, error) {

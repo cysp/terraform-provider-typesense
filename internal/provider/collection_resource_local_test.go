@@ -16,7 +16,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestCollectionResourceLocal(t *testing.T) {
+func TestAccCollectionResourceLocal(t *testing.T) {
 	t.Parallel()
 
 	collections := map[string]typesense_api.CollectionResponse{}
@@ -26,7 +26,6 @@ func TestCollectionResourceLocal(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    uses: ./.github/workflows/gogenerate.yml
+
+  lint:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/golangci-lint.yml
+
+  govulncheck:
+    uses: ./.github/workflows/govulncheck.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  fuzz:
+    uses: ./.github/workflows/fuzz.yml
+
+  goreleaser-check:
+    uses: ./.github/workflows/goreleaser-check.yml
+
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - generate
+      - lint
+      - govulncheck
+      - test
+      - fuzz
+      - goreleaser-check
+    if: ${{ always() }}
+    steps:
+      - run: jq --exit-status 'length > 0 and all(.[]; .result == "success")' <<< "$RESULTS"
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+
+  legacy-generate:
+    name: generate
+    needs: generate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "$RESULT" = success
+        env:
+          RESULT: ${{ needs.generate.result }}
+
+  legacy-lint:
+    name: lint
+    needs: lint
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "$RESULT" = success
+        env:
+          RESULT: ${{ needs.lint.result }}
+
+  legacy-test:
+    name: test
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "$RESULT" = success
+        env:
+          RESULT: ${{ needs.test.result }}
+
+  legacy-testacc:
+    name: testacc
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "$RESULT" = success
+        env:
+          RESULT: ${{ needs.test.result }}

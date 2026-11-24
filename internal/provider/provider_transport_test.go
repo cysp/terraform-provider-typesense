@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProviderMutationNotReplayed(t *testing.T) {
+func TestAccProviderMutationNotReplayed(t *testing.T) {
 	t.Parallel()
 
 	for _, status := range []int{http.StatusTemporaryRedirect, http.StatusPermanentRedirect, http.StatusServiceUnavailable} {
@@ -35,7 +35,6 @@ func TestProviderMutationNotReplayed(t *testing.T) {
 			}))
 			t.Cleanup(server.Close)
 			resource.Test(t, resource.TestCase{
-				IsUnitTest:               true,
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
 					Config: providerConfig(server.URL) + `resource "typesense_key" "test" {

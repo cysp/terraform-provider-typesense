@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccUpgradeFromReleasedProvider(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	name := "testacc_" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)

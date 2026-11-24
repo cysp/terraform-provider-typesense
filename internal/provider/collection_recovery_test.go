@@ -14,7 +14,7 @@ import (
 	api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestCollectionUpdateUncertainCompletion(t *testing.T) {
+func TestAccCollectionUpdateUncertainCompletion(t *testing.T) {
 	t.Parallel()
 
 	for _, failure := range []string{"server_error", "deadline"} {
@@ -54,7 +54,7 @@ func TestCollectionUpdateUncertainCompletion(t *testing.T) {
     fields=[{name="title",type="string",facet=true}]
     timeouts={update="100ms"}
    }`
-			resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 				{Config: config},
 				{Config: changed, ExpectError: regexp.MustCompile("The request was sent once and was not retried")},
 				{Config: changed, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
@@ -65,7 +65,7 @@ func TestCollectionUpdateUncertainCompletion(t *testing.T) {
 	}
 }
 
-func TestCollectionOverlappingAlterationSendsNoMutation(t *testing.T) {
+func TestAccCollectionOverlappingAlterationSendsNoMutation(t *testing.T) {
 	t.Parallel()
 
 	var mutations atomic.Int32
@@ -85,7 +85,7 @@ func TestCollectionOverlappingAlterationSendsNoMutation(t *testing.T) {
  fields=[{name="person",type="object",facet=false}, {name="person.title",type="string"}]
  }`
 	changed := strings.ReplaceAll(original, "facet=false", "facet=true")
-	resource.Test(t, resource.TestCase{IsUnitTest: true, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 		{Config: original},
 		{Config: changed, ExpectError: regexp.MustCompile("No schema alteration was sent")},
 		{Config: original, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},

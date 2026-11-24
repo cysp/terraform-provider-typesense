@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKeyAutodeleteLifecycle(t *testing.T) {
+func TestAccKeyAutodeleteLifecycle(t *testing.T) {
 	t.Parallel()
 
 	// Keep the HTTP oracle independent of provider and SDK key models.
@@ -111,7 +111,6 @@ func TestKeyAutodeleteLifecycle(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: config("") + `import {
@@ -157,6 +156,7 @@ func keyPlanAction(action plancheck.ResourceActionType) resource.ConfigPlanCheck
 }
 
 func TestAccKeyAutodelete(t *testing.T) {
+	requireLiveAcceptance(t)
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
