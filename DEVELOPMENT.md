@@ -1,6 +1,6 @@
 # Development
 
-Use Go and tfplugindocs from `go.mod`, Terraform 1.15 or 1.16, the official golangci-lint release from `.golangci-lint-version`, and GoReleaser from `.tool-versions`.
+Use Go and tfplugindocs from `go.mod`, a Terraform version from the [acceptance matrix](#acceptance-tests), the official golangci-lint release from `.golangci-lint-version`, and GoReleaser from `.tool-versions`.
 
 ```sh
 go mod download
@@ -44,7 +44,7 @@ TF_ACC=1 TYPESENSE_URL=http://127.0.0.1:8108 TYPESENSE_API_KEY=local-test \
   go test -count=1 -parallel=1 -timeout=10m ./internal/provider/
 ```
 
-CI runs every combination of Terraform 1.15/1.16 and Typesense 29.1/30.2. Set `TF_ACC_TERRAFORM_PATH` to test a specific Terraform binary locally.
+CI runs every combination of Terraform 1.15/1.16/1.17 and Typesense 29.1/30.2. Set `TF_ACC_TERRAFORM_PATH` to test a specific Terraform binary locally.
 
 ## Required checks
 
