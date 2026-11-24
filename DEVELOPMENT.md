@@ -1,34 +1,94 @@
 # Development
 
-Use Go and tfplugindocs from `go.mod`, a Terraform version from the [acceptance matrix](#acceptance-tests), the official golangci-lint release from `.golangci-lint-version`, and GoReleaser from `.tool-versions`.
+For a provider change, start with the [validation scope](#validation-scope). For test design, see [Testing](docs/testing.md).
 
-```sh
-go mod download
-golangci-lint config verify
-golangci-lint run
-golangci-lint fmt --diff
-go test -race -shuffle=on -count=1 -timeout=10m ./...
-goreleaser check
-```
+## Prerequisites
 
-Apply formatting with `golangci-lint fmt`.
+Tool requirements come from [go.mod](go.mod) (Go and generators),
+[.golangci-lint-version](.golangci-lint-version), [.tool-versions](.tool-versions)
+and the Terraform matrix in the [test workflow](.github/workflows/test.yml).
+Root documentation generation requires Terraform on `PATH`. Use `go mod download`
+to populate the module cache.
 
-## Vulnerability checks
+Repository-wide guidance lives in [AGENTS.md](AGENTS.md). See [Reviewing changes](docs/reviewing.md) for code review.
 
-Run the pinned `go run` command in the [govulncheck workflow](.github/workflows/govulncheck.yml) from the repository root with the Go version in `go.mod`. The scanner uses the current Go vulnerability database.
+## Commit conventions
 
-## Documentation
+- Use Conventional Commit messages. The type describes the kind of change, the scope identifies the affected component or maintenance concern, and the subject describes the specific change.
+- For components under `internal/`, use the immediate directory's exact name as the scope, such as `provider`. Name individual resources in the subject.
+- Tests, examples, generated files, and documentation about a component use that component's scope, regardless of their location.
+- For repository maintenance, use the established concern name, such as `deps`, `lint`, `generate`, `release`, or `agents`. Scope workflow changes by their purpose.
+- When a cohesive change spans components, use its primary concern as the scope if one clearly owns the change; otherwise omit the scope. Split independently useful changes into separate commits where appropriate.
+- For a new concern, prefer an existing directory, tool, or workflow name. Use recent history to resolve choices left open by these rules.
 
-Edit schema descriptions, `templates/`, and `examples/`, then regenerate:
+## Repository map
+
+Provider schemas, Terraform lifecycle methods, request and response models, and local HTTP fixtures live in [internal/provider](internal/provider/). Typesense API access uses the official Go client and the provider's [key API adapter](internal/provider/key_api.go).
+
+## Validation scope
+
+Select checks by the changed behavior. When preparing a code change for merge, inspect the remote checks for that revision. The [workflows](.github/workflows/) define the current CI matrix.
+
+| Change | Local verification |
+| --- | --- |
+| Agent instructions or prose outside generation inputs | Review instruction consistency, links, and the final diff. Run `git diff --check`. |
+| Go behavior | Test the affected packages and run the [lint and format checks](#linting). Use `go test -race -shuffle=on -count=1 -timeout=10m ./...` and `go build .` for shared behavior or when preparing for merge. |
+| Terraform planning, state, or lifecycle | Exercise the affected transitions through Terraform against local fixtures. Extend coverage where existing tests do not establish the changed behavior. |
+| Schema, examples, templates or other generation inputs | Regenerate, validate the Registry pages and review the tracked and untracked output. Run checks for the affected behavior. |
+| A claim about live Typesense behavior | Use primary documentation or a disposable real-server experiment. Record the server version and the behavior observed. |
+| Packaging | Run the pinned `goreleaser check` and inspect a snapshot build. See [Releases](#releases). |
+
+If a check cannot run, record the command and concrete blocker. Distinguish a passing check from a skipped test or an environment failure.
+
+## Documentation authoring
+
+Edit schema descriptions under `internal/provider/`, examples under `examples/`, and the authoritative page or guide template under `templates/`. Follow the [documentation practices](docs/design/provider-documentation.md). Keep handwritten contributor pages outside the directories managed by tfplugindocs.
+
+## Code generation
+
+After changing a schema or any other generation input, run full generation from the repository root with Terraform on `PATH`. Review the tracked changes and any new files listed by Git.
 
 ```sh
 go generate ./...
-go tool tfplugindocs validate --provider-name=terraform-provider-typesense
-git diff
 git status --short --untracked-files=all
 ```
 
-Review and commit generated documentation with its source changes. To check committed documentation, regenerate from a clean checkout and verify that `git diff --exit-code` and `git status --short --untracked-files=all` show no changes. CI checks both tracked and untracked output.
+To check reproducibility, repeat full generation and the status check in a clean checkout containing your intended changes. The status output should be empty.
+
+## Documentation verification
+
+```sh
+go tool tfplugindocs validate --provider-name=terraform-provider-typesense
+git diff --check
+```
+
+Review the generated pages and validate runnable examples in an isolated configuration.
+
+## Local provider build
+
+`go build .` produces `terraform-provider-typesense` in the repository root.
+For manual Terraform use, the provider address is `cysp/typesense`; see
+HashiCorp's [development overrides](https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers).
+
+## Linting
+
+Install the [official golangci-lint binary](https://golangci-lint.run/docs/welcome/install/local/#binaries)
+at the version recorded in [`.golangci-lint-version`](.golangci-lint-version),
+then run the repository checks:
+
+```sh
+golangci-lint run
+golangci-lint fmt --diff
+```
+
+Run `golangci-lint fmt` to apply the configured formatting, including gofumpt.
+
+## Vulnerability checks
+
+For a local vulnerability check, run the `go run` command from the
+[govulncheck workflow](.github/workflows/govulncheck.yml) at the repository root.
+The workflow pins the scanner version; update that pin explicitly when upgrading
+the scanner. Each run still consults the current Go vulnerability database.
 
 ## Tests
 
