@@ -16,7 +16,7 @@ import (
 	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func TestAccKeyResourceLocal(t *testing.T) {
+func TestAccKeyResourceCreateUpdateDelete(t *testing.T) {
 	t.Parallel()
 
 	keys := map[int64]typesense_api.ApiKey{}
