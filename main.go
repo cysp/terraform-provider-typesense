@@ -14,7 +14,7 @@ import (
 // Root generation requires Terraform on PATH; see DEVELOPMENT.md.
 //go:generate terraform fmt -recursive ./examples/
 
-//go:generate go tool tfplugindocs generate --provider-name=terraform-provider-typesense
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs --provider-name=terraform-provider-typesense
 
 // set by goreleaser.
 var version = "dev"
