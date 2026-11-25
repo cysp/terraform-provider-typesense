@@ -6,10 +6,10 @@ import (
 	"github.com/cysp/terraform-provider-typesense/internal/provider/util"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func (model *CollectionModel) ReadFromResponse(ctx context.Context, collection *typesense_api.CollectionResponse) diag.Diagnostics {
+func (model *CollectionModel) ReadFromResponse(ctx context.Context, collection *api.CollectionResponse) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	model.Name = types.StringValue(collection.Name)
@@ -35,7 +35,7 @@ func (model *CollectionModel) ReadFromResponse(ctx context.Context, collection *
 	return diags
 }
 
-func CollectionFieldModelsFromAPI(apiFields []typesense_api.Field) []CollectionFieldModel {
+func CollectionFieldModelsFromAPI(apiFields []api.Field) []CollectionFieldModel {
 	fields := make([]CollectionFieldModel, 0, len(apiFields))
 
 	for _, apiField := range apiFields {

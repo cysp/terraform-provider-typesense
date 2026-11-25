@@ -6,7 +6,7 @@ import (
 	"github.com/cysp/terraform-provider-typesense/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAliasModelToAPICollectionAliasSchema(t *testing.T) {
@@ -14,21 +14,21 @@ func TestAliasModelToAPICollectionAliasSchema(t *testing.T) {
 
 	tests := map[string]struct {
 		model    provider.AliasModel
-		expected typesense_api.CollectionAliasSchema
+		expected api.CollectionAliasSchema
 	}{
 		"collection name: unknown": {
 			model:    provider.AliasModel{CollectionName: types.StringUnknown()},
-			expected: typesense_api.CollectionAliasSchema{},
+			expected: api.CollectionAliasSchema{},
 		},
 		"collection name: null": {
 			model:    provider.AliasModel{CollectionName: types.StringNull()},
-			expected: typesense_api.CollectionAliasSchema{},
+			expected: api.CollectionAliasSchema{},
 		},
 		"collection name: known": {
 			model: provider.AliasModel{
 				CollectionName: types.StringValue("posts_v1"),
 			},
-			expected: typesense_api.CollectionAliasSchema{
+			expected: api.CollectionAliasSchema{
 				CollectionName: "posts_v1",
 			},
 		},

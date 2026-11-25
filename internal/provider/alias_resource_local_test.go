@@ -11,13 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAccAliasResourceCreateUpdateDelete(t *testing.T) {
 	t.Parallel()
 
-	aliases := map[string]typesense_api.CollectionAlias{}
+	aliases := map[string]api.CollectionAlias{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		handleLocalAliasRequest(t, aliases, w, req)
 	}))
@@ -62,7 +62,7 @@ func TestAccAliasResourceCreateUpdateDelete(t *testing.T) {
 	assert.Empty(t, aliases)
 }
 
-func handleLocalAliasRequest(t *testing.T, aliases map[string]typesense_api.CollectionAlias, w http.ResponseWriter, req *http.Request) {
+func handleLocalAliasRequest(t *testing.T, aliases map[string]api.CollectionAlias, w http.ResponseWriter, req *http.Request) {
 	t.Helper()
 
 	aliasName := pathSuffix(req.URL.Path, "/aliases/")
@@ -74,7 +74,7 @@ func handleLocalAliasRequest(t *testing.T, aliases map[string]typesense_api.Coll
 
 	switch req.Method {
 	case http.MethodPut:
-		var schema typesense_api.CollectionAliasSchema
+		var schema api.CollectionAliasSchema
 
 		err := json.NewDecoder(req.Body).Decode(&schema)
 		if err != nil {
@@ -84,7 +84,7 @@ func handleLocalAliasRequest(t *testing.T, aliases map[string]typesense_api.Coll
 			return
 		}
 
-		alias := typesense_api.CollectionAlias{
+		alias := api.CollectionAlias{
 			CollectionName: schema.CollectionName,
 			Name:           &aliasName,
 		}

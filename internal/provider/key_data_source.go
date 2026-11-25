@@ -47,16 +47,14 @@ func (d *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx, cancel := context.WithTimeout(ctx, defaultOperationTimeout)
 	defer cancel()
 
-	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) {
-		return d.providerData.keys.retrieve(ctx, keyID.ValueInt64())
-	})
+	retrievedKey, err := d.providerData.api.getKey(ctx, keyID.ValueInt64())
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving key", err.Error())
 
 		return
 	}
 
-	metadata, diags := keyMetadataFromResponse(ctx, retrievedAPIKey)
+	metadata, diags := keyMetadataFromResponse(ctx, retrievedKey)
 	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {

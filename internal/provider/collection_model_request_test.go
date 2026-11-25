@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestCollectionModelToAPICollectionSchema(t *testing.T) {
@@ -24,14 +24,14 @@ func TestCollectionModelToAPICollectionSchema(t *testing.T) {
 
 	tests := map[string]struct {
 		model    provider.CollectionModel
-		expected typesense_api.CollectionSchema
+		expected api.CollectionSchema
 	}{
 		"minimal": {
 			model: provider.CollectionModel{
 				Name:   types.StringValue("posts"),
 				Fields: types.ListValueMust(provider.CollectionFieldObjectType(), []attr.Value{}),
 			},
-			expected: typesense_api.CollectionSchema{
+			expected: api.CollectionSchema{
 				Name: "posts",
 			},
 		},
@@ -57,9 +57,9 @@ func TestCollectionModelToAPICollectionSchema(t *testing.T) {
 				SymbolsToIndex:      types.ListValueMust(types.StringType, []attr.Value{types.StringValue("+")}),
 				TokenSeparators:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("-")}),
 			},
-			expected: typesense_api.CollectionSchema{
+			expected: api.CollectionSchema{
 				Name: "posts",
-				Fields: []typesense_api.Field{
+				Fields: []api.Field{
 					{
 						Name:   "embedding",
 						Type:   "float[]",

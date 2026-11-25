@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
-func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typesense_api.CollectionSchema, diag.Diagnostics) {
+func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (api.CollectionSchema, diag.Diagnostics) {
 	var (
-		collectionSchema typesense_api.CollectionSchema
+		collectionSchema api.CollectionSchema
 		diags            diag.Diagnostics
 		fields           []CollectionFieldModel
 	)
@@ -49,16 +49,16 @@ func (model *CollectionModel) ToAPICollectionSchema(ctx context.Context) (typese
 	return collectionSchema, diags
 }
 
-func (model *CollectionFieldModel) ToAPIField() (typesense_api.Field, diag.Diagnostics) {
+func (model *CollectionFieldModel) ToAPIField() (api.Field, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if model.NumDim.ValueInt64() > int64(int(^uint(0)>>1)) {
 		diags.AddError("Invalid field num_dim", fmt.Sprintf("num_dim %d overflows int", model.NumDim.ValueInt64()))
 
-		return typesense_api.Field{}, diags
+		return api.Field{}, diags
 	}
 
-	apiField := typesense_api.Field{
+	apiField := api.Field{
 		Name: model.Name.ValueString(),
 		Type: model.Type.ValueString(),
 	}

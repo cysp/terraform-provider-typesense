@@ -15,8 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/typesense/typesense-go/v3/typesense"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestCollectionUpdateReadConvergence(t *testing.T) {
@@ -90,7 +89,7 @@ func TestCollectionUpdateReadConvergence(t *testing.T) {
 			client, err := api.NewClientWithResponses(server.URL, api.WithHTTPClient(server.Client()))
 			require.NoError(t, err)
 
-			collection := collectionResource{providerData: TypesenseProviderData{client: typesense.NewClient(typesense.WithAPIClient(client)), alter: make(chan struct{}, 1)}}
+			collection := collectionResource{providerData: TypesenseProviderData{api: typesenseAPI{client: client}, alter: make(chan struct{}, 1)}}
 
 			prior := collectionUpdateModel(t, scenario.prior, scenario.timeout)
 			desired := collectionUpdateModel(t, scenario.desired, scenario.timeout)

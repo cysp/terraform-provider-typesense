@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 	"os"
 
@@ -12,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/typesense/typesense-go/v3/typesense"
-	typesenseapi "github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var (
@@ -93,25 +90,16 @@ func (p *TypesenseProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// Operation contexts own deadlines. A redirect can replay a mutation or
-	// forward credentials, so return the original response instead.
-	apiClient, err := typesenseapi.NewClientWithResponses(typesenseURL,
-		typesenseapi.WithAPIKey(typesenseAPIKey),
-		typesenseapi.WithHTTPClient(&http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return http.ErrUseLastResponse
-		}}),
-	)
+	adapter, err := newTypesenseAPI(typesenseURL, typesenseAPIKey)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(path.Root("url"), "Invalid API URL", "The Typesense client could not initialize the configured endpoint.")
 
 		return
 	}
 
-	typesenseClient := typesense.NewClient(typesense.WithAPIClient(apiClient))
-
-	dataSourceData := TypesenseProviderData{client: typesenseClient, keys: keyAPI{client: apiClient}, alter: make(chan struct{}, 1)}
-	resp.DataSourceData = dataSourceData
-	resp.ResourceData = dataSourceData
+	providerData := TypesenseProviderData{api: adapter, alter: make(chan struct{}, 1)}
+	resp.DataSourceData = providerData
+	resp.ResourceData = providerData
 }
 
 func (p *TypesenseProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {

@@ -13,13 +13,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAccCollectionResourceCreateUpdateDelete(t *testing.T) {
 	t.Parallel()
 
-	collections := map[string]typesense_api.CollectionResponse{}
+	collections := map[string]api.CollectionResponse{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		handleLocalCollectionRequest(t, collections, w, req)
 	}))
@@ -80,7 +80,7 @@ func TestAccCollectionResourceCreateUpdateDelete(t *testing.T) {
 
 func handleLocalCollectionRequest(
 	t *testing.T,
-	collections map[string]typesense_api.CollectionResponse,
+	collections map[string]api.CollectionResponse,
 	w http.ResponseWriter,
 	req *http.Request,
 ) {
@@ -88,7 +88,7 @@ func handleLocalCollectionRequest(
 
 	switch {
 	case req.Method == http.MethodPost && req.URL.Path == "/collections":
-		var schema typesense_api.CollectionSchema
+		var schema api.CollectionSchema
 
 		err := json.NewDecoder(req.Body).Decode(&schema)
 		if err != nil {
@@ -98,7 +98,7 @@ func handleLocalCollectionRequest(
 			return
 		}
 
-		collection := typesense_api.CollectionResponse{
+		collection := api.CollectionResponse{
 			Name:               schema.Name,
 			EnableNestedFields: schema.EnableNestedFields,
 			Fields:             schema.Fields,
@@ -115,7 +115,7 @@ func handleLocalCollectionRequest(
 			return
 		}
 
-		var patch typesense_api.CollectionUpdateSchema
+		var patch api.CollectionUpdateSchema
 
 		err := json.NewDecoder(req.Body).Decode(&patch)
 		if err != nil {
@@ -127,7 +127,7 @@ func handleLocalCollectionRequest(
 
 		for _, field := range patch.Fields {
 			if field.Drop != nil && *field.Drop {
-				collection.Fields = slices.DeleteFunc(collection.Fields, func(old typesense_api.Field) bool { return old.Name == field.Name })
+				collection.Fields = slices.DeleteFunc(collection.Fields, func(old api.Field) bool { return old.Name == field.Name })
 			} else {
 				collection.Fields = append(collection.Fields, field)
 			}

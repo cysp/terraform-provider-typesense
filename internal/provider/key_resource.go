@@ -72,7 +72,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createdKey, err := r.providerData.keys.create(ctx, keySchema)
+	createdKey, err := r.providerData.api.createKey(ctx, keySchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating key", err.Error())
 
@@ -106,7 +106,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	keyID := data.ID.ValueInt64()
 
-	retrievedAPIKey, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) { return r.providerData.keys.retrieve(ctx, keyID) })
+	retrievedKey, err := r.providerData.api.getKey(ctx, keyID)
 	if err != nil {
 		if typesenseNotFound(err) {
 			resp.State.RemoveResource(ctx)
@@ -119,7 +119,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedAPIKey)...)
+	resp.Diagnostics.Append(data.ReadFromResponse(ctx, retrievedKey)...)
 
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.SetAttribute(ctx, path.Root("id"), data.ID)...)
@@ -178,7 +178,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	_, err := r.providerData.client.Key(data.ID.ValueInt64()).Delete(ctx)
+	_, err := r.providerData.api.deleteKey(ctx, data.ID.ValueInt64())
 	if err != nil && !typesenseNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting key", err.Error())
 	}
