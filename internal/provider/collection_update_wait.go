@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 const (
@@ -23,7 +23,7 @@ func (r *collectionResource) waitForCollectionUpdate(ctx context.Context, desire
 		PollInterval:              collectionVerificationInterval,
 		ContinuousTargetOccurence: collectionVerificationMatches,
 		Refresh: func() (any, string, error) {
-			current, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Collection(desired.Name).Retrieve)
+			current, err := r.providerData.api.getCollection(ctx, desired.Name)
 			if err != nil {
 				return nil, "", fmt.Errorf("reading collection: %w", err)
 			}

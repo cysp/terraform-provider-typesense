@@ -10,19 +10,19 @@ import (
 	"net/http"
 
 	"github.com/typesense/typesense-go/v3/typesense"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 // KeySchema and KeyResponse extend the SDK's key types with autodelete,
 // supported by Typesense 29.1 and 30.2 but absent from typesense-go v3.2.0.
 type KeySchema struct {
-	typesense_api.ApiKeySchema
+	api.ApiKeySchema
 
 	Autodelete *bool `json:"autodelete,omitempty"`
 }
 
 type KeyResponse struct {
-	typesense_api.ApiKey
+	api.ApiKey
 
 	Autodelete *bool `json:"autodelete,omitempty"`
 }
@@ -33,19 +33,13 @@ var (
 	errInvalidListedKey = errors.New("key listing response contains a key without an id")
 )
 
-// keyAPI uses the same SDK transport, authentication and operation context as
-// the other resources. Only key serialization needs to extend the SDK.
-type keyAPI struct {
-	client *typesense_api.ClientWithResponses
-}
-
-func (client keyAPI) create(ctx context.Context, key KeySchema) (*KeyResponse, error) {
+func (a typesenseAPI) createKey(ctx context.Context, key KeySchema) (*KeyResponse, error) {
 	body, err := json.Marshal(key)
 	if err != nil {
 		return nil, fmt.Errorf("encode key: %w", err)
 	}
 
-	response, err := client.client.CreateKeyWithBody(ctx, "application/json", bytes.NewReader(body))
+	response, err := a.client.CreateKeyWithBody(ctx, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create key: %w", err)
 	}
@@ -55,19 +49,21 @@ func (client keyAPI) create(ctx context.Context, key KeySchema) (*KeyResponse, e
 	return decodeKeyResponse(response, http.StatusCreated)
 }
 
-func (client keyAPI) retrieve(ctx context.Context, id int64) (*KeyResponse, error) {
-	response, err := client.client.GetKey(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve key: %w", err)
-	}
+func (a typesenseAPI) getKey(ctx context.Context, id int64) (*KeyResponse, error) {
+	return retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, func(ctx context.Context) (*KeyResponse, error) {
+		response, err := a.client.GetKey(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("retrieve key: %w", err)
+		}
 
-	defer response.Body.Close()
+		defer response.Body.Close()
 
-	return decodeKeyResponse(response, http.StatusOK)
+		return decodeKeyResponse(response, http.StatusOK)
+	})
 }
 
-func (client keyAPI) list(ctx context.Context) ([]*KeyResponse, error) {
-	response, err := client.client.GetKeys(ctx)
+func (a typesenseAPI) listKeys(ctx context.Context) ([]*KeyResponse, error) {
+	response, err := a.client.GetKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list keys: %w", err)
 	}
@@ -94,6 +90,15 @@ func (client keyAPI) list(ctx context.Context) ([]*KeyResponse, error) {
 	}
 
 	return result.Keys, nil
+}
+
+func (a typesenseAPI) deleteKey(ctx context.Context, id int64) (*api.ApiKeyDeleteResponse, error) {
+	response, err := a.client.DeleteKeyWithResponse(ctx, id)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // Preserve the SDK error in the resource diagnostic.
+	}
+
+	return responseValue(response.JSON200, response.StatusCode(), response.Body)
 }
 
 func decodeKeyResponse(response *http.Response, status int) (*KeyResponse, error) {

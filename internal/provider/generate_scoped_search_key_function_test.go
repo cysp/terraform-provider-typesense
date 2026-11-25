@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/require"
 	"github.com/typesense/typesense-go/v3/typesense"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 // The decoded scoped-key payload starts after the 44-byte base64 digest and four-byte parent prefix.

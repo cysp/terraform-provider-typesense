@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/require"
 	"github.com/typesense/typesense-go/v3/typesense"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAccCollectionSchemaLifecycle(t *testing.T) {

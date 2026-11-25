@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestKeyModelToAPIKeySchema(t *testing.T) {
@@ -20,21 +20,21 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 
 	tests := map[string]struct {
 		model    provider.KeyModel
-		expected typesense_api.ApiKeySchema
+		expected api.ApiKeySchema
 	}{
 		"actions,collections: null": {
 			model: provider.KeyModel{
 				Actions:     types.ListNull(types.StringType),
 				Collections: types.ListNull(types.StringType),
 			},
-			expected: typesense_api.ApiKeySchema{},
+			expected: api.ApiKeySchema{},
 		},
 		"actions,collections: empty": {
 			model: provider.KeyModel{
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -44,7 +44,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{"*"},
 				Collections: []string{},
 			},
@@ -54,7 +54,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("*")}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{"*"},
 			},
@@ -65,7 +65,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -76,7 +76,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -87,7 +87,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Actions:     types.ListValueMust(types.StringType, []attr.Value{}),
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Description: "description",
 				Actions:     []string{},
 				Collections: []string{},
@@ -99,7 +99,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Unknown(),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -110,7 +110,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Null(),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -121,7 +121,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				ExpiresAt:   types.Int64Value(0),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 				ExpiresAt:   &zero,
@@ -133,7 +133,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringUnknown(),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -144,7 +144,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringNull(),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -155,7 +155,7 @@ func TestKeyModelToAPIKeySchema(t *testing.T) {
 				Collections: types.ListValueMust(types.StringType, []attr.Value{}),
 				Value:       types.StringValue("value"),
 			},
-			expected: typesense_api.ApiKeySchema{
+			expected: api.ApiKeySchema{
 				Actions:     []string{},
 				Collections: []string{},
 				Value:       &value,

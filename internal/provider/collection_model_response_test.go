@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestCollectionModelReadFromResponse(t *testing.T) {
@@ -25,11 +25,11 @@ func TestCollectionModelReadFromResponse(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		collection typesense_api.CollectionResponse
+		collection api.CollectionResponse
 		expected   provider.CollectionModel
 	}{
 		"empty": {
-			collection: typesense_api.CollectionResponse{},
+			collection: api.CollectionResponse{},
 			expected: provider.CollectionModel{
 				Name:                types.StringValue(""),
 				DefaultSortingField: types.StringNull(),
@@ -42,11 +42,11 @@ func TestCollectionModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"full": {
-			collection: typesense_api.CollectionResponse{
+			collection: api.CollectionResponse{
 				Name:                "posts",
 				DefaultSortingField: types.StringValue("embedding").ValueStringPointer(),
 				EnableNestedFields:  &enableNestedFields,
-				Fields: []typesense_api.Field{
+				Fields: []api.Field{
 					{
 						Name:   "embedding",
 						Type:   "float[]",

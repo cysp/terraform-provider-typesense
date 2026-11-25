@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestKeyModelReadFromResponse(t *testing.T) {
@@ -22,11 +22,11 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		apiKey   typesense_api.ApiKey
+		apiKey   api.ApiKey
 		expected provider.KeyModel
 	}{
 		"empty": {
-			apiKey: typesense_api.ApiKey{},
+			apiKey: api.ApiKey{},
 			expected: provider.KeyModel{
 				Description: types.StringValue(""),
 				Actions:     types.ListNull(types.StringType),
@@ -34,7 +34,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"id": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Id: &zero,
 			},
 			expected: provider.KeyModel{
@@ -45,7 +45,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: empty": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Actions:     []string{},
 				Collections: []string{},
 			},
@@ -56,7 +56,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: actions": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Actions:     []string{"*"},
 				Collections: []string{},
 			},
@@ -67,7 +67,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"actions,collections: collections": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Actions:     []string{},
 				Collections: []string{"*"},
 			},
@@ -78,7 +78,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"description": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Description: "description",
 			},
 			expected: provider.KeyModel{
@@ -88,7 +88,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"expires at": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				ExpiresAt: &zero,
 			},
 			expected: provider.KeyModel{
@@ -99,7 +99,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"expires at: far future": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				ExpiresAt: &farFutureTimestamp,
 			},
 			expected: provider.KeyModel{
@@ -110,7 +110,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"value": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Value: &value,
 			},
 			expected: provider.KeyModel{
@@ -122,7 +122,7 @@ func TestKeyModelReadFromResponse(t *testing.T) {
 			},
 		},
 		"value,prefix": {
-			apiKey: typesense_api.ApiKey{
+			apiKey: api.ApiKey{
 				Value:       &value,
 				ValuePrefix: &prefix,
 			},

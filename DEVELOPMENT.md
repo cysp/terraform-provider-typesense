@@ -23,7 +23,7 @@ Repository-wide guidance lives in [AGENTS.md](AGENTS.md). See [Reviewing changes
 
 ## Repository map
 
-Provider schemas, Terraform lifecycle methods, request and response models, and local HTTP fixtures live in [internal/provider](internal/provider/). Typesense API access uses the official Go client and the provider's [key API adapter](internal/provider/key_api.go).
+Provider schemas, Terraform lifecycle methods, request and response models, and local HTTP fixtures live in [internal/provider](internal/provider/). The [Typesense API adapter](internal/provider/typesense_api.go) configures the generated SDK client and handles shared HTTP response semantics. Its operations are grouped by [alias](internal/provider/typesense_api_alias.go), [collection](internal/provider/typesense_api_collection.go), and [key](internal/provider/typesense_api_key.go).
 
 ## Validation scope
 

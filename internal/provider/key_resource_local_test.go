@@ -13,13 +13,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
-	typesense_api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAccKeyResourceCreateUpdateDelete(t *testing.T) {
 	t.Parallel()
 
-	keys := map[int64]typesense_api.ApiKey{}
+	keys := map[int64]api.ApiKey{}
 
 	var nextID int64 = 1
 
@@ -71,7 +71,7 @@ func TestAccKeyResourceCreateUpdateDelete(t *testing.T) {
 
 func handleLocalKeyRequest(
 	t *testing.T,
-	keys map[int64]typesense_api.ApiKey,
+	keys map[int64]api.ApiKey,
 	nextID *int64,
 	w http.ResponseWriter,
 	req *http.Request,
@@ -80,7 +80,7 @@ func handleLocalKeyRequest(
 
 	switch {
 	case req.Method == http.MethodPost && req.URL.Path == "/keys":
-		var schema typesense_api.ApiKeySchema
+		var schema api.ApiKeySchema
 
 		err := json.NewDecoder(req.Body).Decode(&schema)
 		if err != nil {
@@ -93,7 +93,7 @@ func handleLocalKeyRequest(
 		keyID := *nextID
 		*nextID = keyID + 1
 		value := fmt.Sprintf("test-key-%d", keyID)
-		key := typesense_api.ApiKey{
+		key := api.ApiKey{
 			Id:          &keyID,
 			Description: schema.Description,
 			Actions:     schema.Actions,

@@ -59,7 +59,7 @@ func (r *aliasResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	aliasSchema := data.ToAPICollectionAliasSchema()
 
-	createdAlias, err := r.providerData.client.Aliases().Upsert(ctx, data.Name.ValueString(), &aliasSchema)
+	createdAlias, err := r.providerData.api.upsertAlias(ctx, data.Name.ValueString(), aliasSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating alias", err.Error())
 
@@ -91,7 +91,7 @@ func (r *aliasResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	retrievedAlias, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Alias(data.Name.ValueString()).Retrieve)
+	retrievedAlias, err := r.providerData.api.getAlias(ctx, data.Name.ValueString())
 	if err != nil {
 		if typesenseNotFound(err) {
 			resp.State.RemoveResource(ctx)
@@ -144,7 +144,7 @@ func (r *aliasResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	aliasSchema := data.ToAPICollectionAliasSchema()
 
-	updatedAlias, err := r.providerData.client.Aliases().Upsert(ctx, data.Name.ValueString(), &aliasSchema)
+	updatedAlias, err := r.providerData.api.upsertAlias(ctx, data.Name.ValueString(), aliasSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating alias", err.Error())
 
@@ -176,7 +176,7 @@ func (r *aliasResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	_, err := r.providerData.client.Alias(data.Name.ValueString()).Delete(ctx)
+	_, err := r.providerData.api.deleteAlias(ctx, data.Name.ValueString())
 	if err != nil && !typesenseNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting alias", err.Error())
 	}

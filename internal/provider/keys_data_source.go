@@ -55,7 +55,7 @@ func (d *keysDataSource) Read(ctx context.Context, _ datasource.ReadRequest, res
 	ctx, cancel := context.WithTimeout(ctx, defaultOperationTimeout)
 	defer cancel()
 
-	keys, err := d.providerData.keys.list(ctx)
+	keys, err := d.providerData.api.listKeys(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Error retrieving keys", err.Error())
 

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
-	typesenseapi "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 var (
@@ -64,7 +64,7 @@ func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	createdCollection, err := r.providerData.client.Collections().Create(ctx, &collectionSchema)
+	createdCollection, err := r.providerData.api.createCollection(ctx, &collectionSchema)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating collection", err.Error())
 
@@ -96,7 +96,7 @@ func (r *collectionResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	retrievedCollection, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Collection(data.Name.ValueString()).Retrieve)
+	retrievedCollection, err := r.providerData.api.getCollection(ctx, data.Name.ValueString())
 	if err != nil {
 		if typesenseNotFound(err) {
 			resp.State.RemoveResource(ctx)
@@ -165,7 +165,7 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Verify the planned starting schema, or recognize an already-completed change.
-	current, err := retrieveWithNotFoundConfirmation(ctx, notFoundConfirmationTimeout, r.providerData.client.Collection(data.Name.ValueString()).Retrieve)
+	current, err := r.providerData.api.getCollection(ctx, data.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading collection before update", err.Error())
 
@@ -207,7 +207,7 @@ func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	if len(changes) > 0 {
-		_, err = r.providerData.client.Collection(data.Name.ValueString()).Update(ctx, &typesenseapi.CollectionUpdateSchema{Fields: changes})
+		_, err = r.providerData.api.updateCollection(ctx, data.Name.ValueString(), api.CollectionUpdateSchema{Fields: changes})
 		if err != nil {
 			resp.Diagnostics.AddError("Collection update did not complete successfully", "The request was sent once and was not retried. Its completion may be uncertain. Wait for schema alteration activity to finish, then refresh and plan again before applying. "+err.Error())
 
@@ -247,7 +247,7 @@ func (r *collectionResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
-	_, err := r.providerData.client.Collection(data.Name.ValueString()).Delete(ctx)
+	_, err := r.providerData.api.deleteCollection(ctx, data.Name.ValueString())
 	if err != nil && !typesenseNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting collection", err.Error())
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/require"
 	"github.com/typesense/typesense-go/v3/typesense"
-	api "github.com/typesense/typesense-go/v3/typesense/api"
+	"github.com/typesense/typesense-go/v3/typesense/api"
 )
 
 func TestAccUpgradeDynamicFieldsFromReleasedProvider(t *testing.T) {
