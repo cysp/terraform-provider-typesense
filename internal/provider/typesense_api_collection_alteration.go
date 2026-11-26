@@ -1,8 +1,8 @@
 package provider
 
 import (
-	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"slices"
@@ -131,10 +131,7 @@ func (c *observedCollection) fieldForAlteration(change api.Field) (alterationFie
 func rebuildCollectionField(raw json.RawMessage, want api.Field) (alterationField, error) {
 	var field alterationField
 
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-
-	err := decoder.Decode(&field)
+	err := jsonv2.Unmarshal(raw, &field, jsonv2.RejectUnknownMembers(true))
 	if err != nil {
 		return alterationField{}, fmt.Errorf("cannot safely reindex field %q: %w. No alteration was sent. Use a provider version that supports this field definition or apply the field change through Typesense, then refresh and review a new plan", want.Name, err)
 	}

@@ -1,13 +1,12 @@
 package provider_test
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -20,34 +19,52 @@ func TestAccCollectionResourceReindexFieldProperties(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		name    string
-		unknown bool
+		name, unknown string
 	}{
 		{name: "preserve"},
-		{name: "unrecognized", unknown: true},
+		{name: "unknown member", unknown: "future_property"},
+		{name: "case variant", unknown: "cascade_deletE"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			collections := map[string]api.CollectionResponse{}
+			field := map[string]any{
+				"name": "author", "type": "string", "reference": "authors.id", "facet": false,
+				"index": true, "infix": false, "locale": "", "optional": false, "sort": false,
+				"async_reference": true, "cascade_delete": false, "truncate_len": 7,
+			}
+			if test.unknown != "" {
+				field[test.unknown] = true
+			}
 
-			var patches [][]byte
+			initial, err := json.Marshal(field)
+			require.NoError(t, err)
 
-			server := httptest.NewServer(fieldPropertiesHandler(t, collections, test.unknown, &patches))
+			var (
+				patches    [][]byte
+				handlerErr error
+			)
+
+			server := httptest.NewServer(fieldPropertiesHandler(initial, &patches, &handlerErr))
 			t.Cleanup(server.Close)
 			config := providerConfig(server.URL) + `resource "typesense_collection" "test" {
  name="posts"
- fields=[{name="author",type="string",reference="authors.id",facet=false}]
+ fields=[{name="author",type="string",reference="authors.id",facet=true}]
 }`
 
-			change := resource.TestStep{Config: strings.Replace(config, "facet=false", "facet=true", 1)}
-			if test.unknown {
-				change.ExpectError = regexp.MustCompile("future_property")
+			change := resource.TestStep{Config: config}
+			if test.unknown != "" {
+				change.ExpectError = regexp.MustCompile(test.unknown)
 			}
 
-			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{{Config: config}, change}})
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+				{Config: config, ResourceName: "typesense_collection.test", ImportState: true, ImportStateId: "posts", ImportStatePersist: true},
+				change,
+			}})
+			server.Close()
+			require.NoError(t, handlerErr)
 
-			if test.unknown {
+			if test.unknown != "" {
 				require.Empty(t, patches)
 
 				return
@@ -55,81 +72,75 @@ func TestAccCollectionResourceReindexFieldProperties(t *testing.T) {
 
 			require.Len(t, patches, 1)
 
-			var payload struct {
-				Fields []map[string]json.RawMessage `json:"fields"`
-			}
-			require.NoError(t, json.Unmarshal(patches[0], &payload))
-			require.Len(t, payload.Fields, 2)
-
-			for property, expected := range map[string]string{"async_reference": "true", "cascade_delete": "false", "truncate_len": "7", "facet": "true"} {
-				require.Equal(t, expected, string(payload.Fields[1][property]), property)
-			}
+			expected, err := json.Marshal(map[string]any{"fields": []map[string]any{
+				{"name": "author", "type": "", "drop": true},
+				{
+					"name": "author", "type": "string", "facet": true, "index": true, "infix": false,
+					"locale": "", "optional": false, "sort": false, "reference": "authors.id",
+					"async_reference": true, "cascade_delete": false, "truncate_len": 7,
+				},
+			}})
+			require.NoError(t, err)
+			require.JSONEq(t, string(expected), string(patches[0]))
 		})
 	}
 }
 
-func fieldPropertiesHandler(t *testing.T, collections map[string]api.CollectionResponse, unknown bool, patches *[][]byte) http.HandlerFunc {
-	t.Helper()
+var errExpectedFieldReindex = errors.New("expected a drop and re-add of the field")
 
+func fieldPropertiesHandler(current json.RawMessage, patches *[][]byte, handlerErr *error) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if req.Method == http.MethodPatch {
+		w.Header().Set("Content-Type", "application/json")
+
+		if req.URL.Path != "/collections/posts" || current == nil {
+			http.NotFound(w, req)
+
+			return
+		}
+
+		switch req.Method {
+		case http.MethodGet, http.MethodDelete:
+			err := json.NewEncoder(w).Encode(map[string]any{"name": "posts", "fields": []json.RawMessage{current}})
+			if err != nil {
+				*handlerErr = err
+			}
+
+			if req.Method == http.MethodDelete {
+				current = nil
+			}
+		case http.MethodPatch:
 			body, err := io.ReadAll(req.Body)
 			if err != nil {
+				*handlerErr = err
 				http.Error(w, err.Error(), http.StatusBadRequest)
 
 				return
 			}
 
 			*patches = append(*patches, body)
-			req.Body = io.NopCloser(bytes.NewReader(body))
+
+			var patch struct {
+				Fields []json.RawMessage `json:"fields"`
+			}
+
+			err = json.Unmarshal(body, &patch)
+			if err != nil || len(patch.Fields) != 2 {
+				*handlerErr = errors.Join(errExpectedFieldReindex, err)
+
+				http.Error(w, "invalid alteration", http.StatusBadRequest)
+
+				return
+			}
+
+			current = patch.Fields[1]
+
+			_, err = w.Write(body)
+			if err != nil {
+				*handlerErr = err
+			}
+		default:
+			http.Error(w, "unexpected method", http.StatusMethodNotAllowed)
 		}
-
-		if req.Method != http.MethodGet {
-			handleLocalCollectionRequest(t, collections, w, req)
-
-			return
-		}
-
-		rec := httptest.NewRecorder()
-		handleLocalCollectionRequest(t, collections, rec, req)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(rec.Code)
-
-		if rec.Code != http.StatusOK {
-			_, _ = w.Write(rec.Body.Bytes())
-
-			return
-		}
-
-		var (
-			result map[string]json.RawMessage
-			fields []map[string]json.RawMessage
-		)
-
-		err := json.Unmarshal(rec.Body.Bytes(), &result)
-		if err != nil {
-			t.Error(err)
-
-			return
-		}
-
-		err = json.Unmarshal(result["fields"], &fields)
-		if err != nil {
-			t.Error(err)
-
-			return
-		}
-
-		fields[0]["async_reference"] = json.RawMessage("true")
-		fields[0]["cascade_delete"] = json.RawMessage("false")
-
-		fields[0]["truncate_len"] = json.RawMessage("7")
-		if unknown {
-			fields[0]["future_property"] = json.RawMessage("true")
-		}
-
-		result["fields"], _ = json.Marshal(fields)
-		_ = json.NewEncoder(w).Encode(result)
 	}
 }
 
