@@ -68,7 +68,9 @@ Terraform's [`ignore_changes`](https://developer.hashicorp.com/terraform/languag
 
 ## Indexed fields with unstored values
 
-Typesense removes `store=false` values before saving the document. Reindexing an indexed field with this setting can erase existing search matches even when the field schema looks correct after the update. The provider refuses to drop and re-add a retained field in this case, including when the collection currently reports zero documents. To migrate, populate a new collection from the original data and switch the alias. If index downtime is acceptable, explicitly remove the field, add it back in a separate apply, and reingest the values. Unrelated field changes can proceed.
+Typesense can keep a field searchable while omitting its value from stored documents. Reindexing can then erase existing search matches. The provider refuses to rebuild a retained indexed field when the field itself or a containing object or object array has `store=false`. For example, a child declared as `person.title` can report `store=true` even though `person` has `store=false` and the stored document lacks the entire object. This check also applies when the collection currently reports zero documents. Unrelated edits and explicit removals remain available.
+
+To preserve the storage policy, create the destination collection through Typesense with the intended `store=false` settings before loading any documents. Populate it from the original data, verify search results and document retrieval, then switch the alias. Import the new collection to manage it with Terraform. This resource cannot configure `store=false` on a newly added field. Removing and re-adding a field through Terraform uses Typesense’s default `store=true`, so reingested values may be stored on disk. Typesense can also reject adding a required field to a populated collection whose stored documents lack its values.
 
 ## Dynamic rule alterations
 
