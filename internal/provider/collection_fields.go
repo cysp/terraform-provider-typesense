@@ -116,12 +116,27 @@ func (model *CollectionModel) readCollection(ctx context.Context, response *api.
 	return diags
 }
 
+var errReindexUnstoredField = errors.New("cannot reindex field")
+
 func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {
 	previous := current.Fields
 
 	removed, err := collectionFieldsToDrop(current, desired)
 	if err != nil {
 		return nil, err
+	}
+
+	// A drop applies to every observed definition with that name, including
+	// fields implicitly dropped with a nested parent.
+	for _, old := range previous {
+		if old.Store == nil || *old.Store || (old.Index != nil && !*old.Index) {
+			continue
+		}
+
+		sameName := func(field api.Field) bool { return field.Name == old.Name }
+		if slices.ContainsFunc(removed, sameName) && slices.ContainsFunc(desired, sameName) {
+			return nil, fmt.Errorf("%w %q with store=false. Typesense cannot rebuild its indexed values from stored documents. No schema alteration was sent. Populate a new collection from the original data and switch the alias, or explicitly remove the field before adding it again and reingesting its values", errReindexUnstoredField, old.Name)
+		}
 	}
 
 	var changes []api.Field

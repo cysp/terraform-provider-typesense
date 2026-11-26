@@ -101,7 +101,7 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 		{Config: config, PreConfig: func() {
 			_, err := client.Collection(name).Update(context.Background(), &api.CollectionUpdateSchema{Fields: []api.Field{
 				{Name: "title", Drop: new(true)},
-				{Name: "title", Type: "string", Optional: new(true), Facet: new(true), Store: new(false)},
+				{Name: "title", Type: "string", Optional: new(true), Facet: new(true), Stem: new(true)},
 				{Name: "rogue.*", Type: "string", Optional: new(true)},
 				{Name: "extra", Type: "string", Optional: new(true), Facet: new(true)},
 			}})
@@ -113,8 +113,8 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 			require.Len(t, current.Fields, 2)
 			index := slices.IndexFunc(current.Fields, func(field api.Field) bool { return field.Name == "title" })
 			require.NotEqual(t, -1, index)
-			require.NotNil(t, current.Fields[index].Store)
-			require.False(t, *current.Fields[index].Store)
+			require.NotNil(t, current.Fields[index].Stem)
+			require.True(t, *current.Fields[index].Stem)
 		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 		{Config: strings.ReplaceAll(config, `type="string"`, `type="string[]"`), ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionUpdate)}}},
 		{Config: strings.ReplaceAll(config, `type="string"`, `type="string[]"`), PreConfig: func() {
@@ -124,8 +124,8 @@ func TestAccCollectionExternalDrift(t *testing.T) {
 			index := slices.IndexFunc(current.Fields, func(field api.Field) bool { return field.Name == "title" })
 			require.NotEqual(t, -1, index)
 			require.Equal(t, "string[]", current.Fields[index].Type)
-			require.NotNil(t, current.Fields[index].Store)
-			require.False(t, *current.Fields[index].Store)
+			require.NotNil(t, current.Fields[index].Stem)
+			require.True(t, *current.Fields[index].Stem)
 		}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 	}})
 }

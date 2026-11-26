@@ -66,6 +66,10 @@ Terraform still uses `fields` when creating the collection. Afterwards, `ignore_
 
 Terraform's [`ignore_changes`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#ignore_changes) does not select fields by name or regex. Individual list indexes refer to positions, not field identities; using them for a changing schema can ignore the wrong field. Ignoring the entire attribute is the broad opt-out from field management.
 
+## Indexed fields with unstored values
+
+Typesense removes `store=false` values before saving the document. Reindexing an indexed field with this setting can erase existing search matches even when the field schema looks correct after the update. The provider refuses to drop and re-add a retained field in this case, including when the collection currently reports zero documents. To migrate, populate a new collection from the original data and switch the alias. If index downtime is acceptable, explicitly remove the field, add it back in a separate apply, and reingest the values. Unrelated field changes can proceed.
+
 ## Dynamic rule alterations
 
 Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing an opaque dynamic rule when the same alteration leaves any existing concrete field untouched, before sending the alteration. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.

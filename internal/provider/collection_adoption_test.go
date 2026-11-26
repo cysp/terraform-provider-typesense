@@ -19,12 +19,13 @@ func TestAccCollectionExpansionAdoptionMocked(t *testing.T) {
 	for _, scenario := range []struct {
 		name, declaration string
 		mutations         int32
+		stored            bool
 	}{
-		{"matching", `{name="score",type="int64",optional=true,sort=true}`, 0},
-		{"facet", `{name="score",type="int64",optional=true,sort=true,facet=true}`, 1},
-		{"type", `{name="score",type="float",optional=true,sort=true}`, 1},
-		{"named_auto", `{name="score",type="auto",optional=true}`, 1},
-		{"named_string", `{name="score",type="string*",optional=true}`, 1},
+		{"matching", `{name="score",type="int64",optional=true,sort=true}`, 0, false},
+		{"facet", `{name="score",type="int64",optional=true,sort=true,facet=true}`, 1, true},
+		{"type", `{name="score",type="float",optional=true,sort=true}`, 1, true},
+		{"named_auto", `{name="score",type="auto",optional=true}`, 1, true},
+		{"named_string", `{name="score",type="string*",optional=true}`, 1, true},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			t.Parallel()
@@ -60,7 +61,7 @@ func TestAccCollectionExpansionAdoptionMocked(t *testing.T) {
 					{Config: original},
 					{Config: adopted, PreConfig: func() {
 						current := collections["scores"]
-						current.Fields = append(current.Fields, api.Field{Name: "score", Type: "int64", Optional: new(true), Sort: new(true), Store: new(false), Facet: new(false), Infix: new(false), Index: new(true), Locale: new("")})
+						current.Fields = append(current.Fields, api.Field{Name: "score", Type: "int64", Optional: new(true), Sort: new(true), Store: new(scenario.stored), Facet: new(false), Infix: new(false), Index: new(true), Locale: new("")})
 						collections["scores"] = current
 					}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", action)}}},
 					{Config: adopted, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
@@ -70,7 +71,7 @@ func TestAccCollectionExpansionAdoptionMocked(t *testing.T) {
 						current := collections["scores"]
 						require.Len(t, current.Fields, 2)
 						require.NotNil(t, current.Fields[1].Store)
-						require.False(t, *current.Fields[1].Store)
+						require.Equal(t, scenario.stored, *current.Fields[1].Store)
 					}, ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction("typesense_collection.test", plancheck.ResourceActionNoop)}}},
 					{Config: original},
 					{Config: original, PreConfig: func() {
