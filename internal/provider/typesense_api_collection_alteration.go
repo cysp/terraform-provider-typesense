@@ -147,7 +147,7 @@ func rebuildCollectionField(raw json.RawMessage, want api.Field) (alterationFiel
 	}
 
 	if field.NumDim == nil && field.Embed == nil {
-		field.HNSWParams = nil
+		field.VecDist, field.HNSWParams = nil, nil
 	}
 
 	return field, nil

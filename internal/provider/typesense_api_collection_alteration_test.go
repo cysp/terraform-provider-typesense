@@ -142,7 +142,7 @@ func TestAccCollectionResourceAmbiguousFieldSource(t *testing.T) {
 
 			fields := []api.Field{
 				{Name: "phrase", Type: "auto", Optional: new(true), Store: new(true)},
-				{Name: "phrase", Type: "string", Optional: new(true), Store: new(false)},
+				{Name: "phrase", Type: "string", Optional: new(true), Stem: new(true)},
 			}
 			if firstType == "string" {
 				fields[0], fields[1] = fields[1], fields[0]
