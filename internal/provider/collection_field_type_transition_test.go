@@ -18,12 +18,12 @@ func TestAccCollectionResourceFieldTypeTransition(t *testing.T) {
 
 	for _, test := range []struct {
 		name, from, to, option string
-		retain                 bool
+		expected               string
 	}{
-		{"remove stemming", "string", "int64", "stem", false},
-		{"retain stemming", "string", "string[]", "stem", true},
-		{"remove range index", "int64", "string", "range_index", false},
-		{"retain range index", "int64", "float[]", "range_index", true},
+		{"remove stemming", "string", "int64", "stem", "false"},
+		{"retain stemming", "string", "string[]", "stem", "true"},
+		{"remove range index", "int64", "string", "range_index", ""},
+		{"retain range index", "int64", "float[]", "range_index", "true"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -36,13 +36,7 @@ func TestAccCollectionResourceFieldTypeTransition(t *testing.T) {
 				field := getAlteredField(t, client, name)
 				require.JSONEq(t, fmt.Sprintf("%q", test.to), string(field["type"]))
 
-				if test.retain {
-					require.Equal(t, "true", string(field[test.option]))
-
-					return
-				}
-
-				require.NotEqual(t, "true", string(field[test.option]))
+				require.Equal(t, test.expected, string(field[test.option]))
 			})
 		})
 	}
