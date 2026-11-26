@@ -19,7 +19,7 @@ Typesense 29.1 rejects adding or modifying reference fields on existing collecti
 
 ## Default sorting field
 
-Typesense clears the collection’s default sorting field when an alteration drops that field, even if the same request adds it back. The provider refuses such a rebuild. To change the field while preserving default ranking, populate a new collection with the desired schema and switch the alias. To remove the field and clear the default ranking, omit `default_sorting_field` and remove the field from `fields`. An explicitly configured default sorting field must appear in `fields`.
+Typesense clears the collection’s default sorting field when an alteration drops that field, even if the same request adds it back. The provider refuses such a rebuild. To change the field while preserving default ranking, populate a new collection with the desired schema and switch the alias. To remove the field and clear the default ranking, omit `default_sorting_field` and remove the field from `fields`. The plan must allow the default to clear. For example, if `lifecycle.ignore_changes` retains the existing `default_sorting_field`, its field must remain in the planned `fields`.
 
 ## Field ownership
 

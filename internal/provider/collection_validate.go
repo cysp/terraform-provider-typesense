@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,24 +12,16 @@ import (
 var _ resource.ResourceWithValidateConfig = (*collectionResource)(nil)
 
 func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var (
-		value   types.List
-		sorting types.String
-	)
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("default_sorting_field"), &sorting)...)
+	var value types.List
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("fields"), &value)...)
 
 	if resp.Diagnostics.HasError() || value.IsNull() || value.IsUnknown() {
 		return
 	}
 
-	allNamesKnown := true
-
 	names := make(map[string]bool, len(value.Elements()))
 	for index, element := range value.Elements() {
 		if element.IsNull() || element.IsUnknown() {
-			allNamesKnown = false
-
 			continue
 		}
 
@@ -42,8 +33,6 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		}
 
 		if field.Name.IsUnknown() || field.Name.IsNull() {
-			allNamesKnown = false
-
 			continue
 		}
 
@@ -53,9 +42,5 @@ func (r *collectionResource) ValidateConfig(ctx context.Context, req resource.Va
 		}
 
 		names[name] = true
-	}
-
-	if name := sorting.ValueString(); allNamesKnown && name != "" && !names[name] {
-		resp.Diagnostics.AddAttributeError(path.Root("default_sorting_field"), "Missing default sorting field", fmt.Sprintf("default_sorting_field names %q, which is absent from fields. Keep the field declaration or remove default_sorting_field from the configuration.", name))
 	}
 }
