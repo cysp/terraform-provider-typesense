@@ -28,13 +28,17 @@ func TestAccCollectionConfigValidation(t *testing.T) {
 
 func TestAccCollectionUnknownFieldName(t *testing.T) {
 	t.Parallel()
-	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
-		{Config: providerConfig("http://127.0.0.1:1") + `resource "terraform_data" "field" {
- input="title"
+
+	config := providerConfig("http://127.0.0.1:1") + `resource "terraform_data" "field" {
+ input="other"
  }
  resource "typesense_collection" "test" {
  name="posts"
- fields=[{name=terraform_data.field.output,type="string"}]
- }`, PlanOnly: true, ExpectNonEmptyPlan: true},
+ default_sorting_field="rank"
+ fields=[{name=terraform_data.field.output,type="int64",sort=true}]
+ }`
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
+		{Config: config, PlanOnly: true, ExpectNonEmptyPlan: true},
+		{Config: config, ExpectError: regexp.MustCompile("Missing default sorting field")},
 	}})
 }

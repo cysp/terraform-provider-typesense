@@ -99,7 +99,7 @@ func (model *CollectionModel) ResourceSchemaAttributes(ctx context.Context) map[
 			},
 		},
 		"default_sorting_field": schema.StringAttribute{
-			MarkdownDescription: "Default sorting field returned by Typesense when omitted. Explicit changes require collection replacement.",
+			MarkdownDescription: "Default sorting field returned by Typesense when omitted. A nonempty default sorting field in the plan must appear in the planned fields. Explicit changes require collection replacement.",
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.String{

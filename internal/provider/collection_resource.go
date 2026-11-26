@@ -44,7 +44,7 @@ func (r *collectionResource) ImportState(ctx context.Context, req resource.Impor
 func (r *collectionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data CollectionModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(data.readPlan(ctx, req.Plan)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -120,7 +120,7 @@ func (r *collectionResource) Read(ctx context.Context, req resource.ReadRequest,
 func (r *collectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data CollectionModel
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(data.readPlan(ctx, req.Plan)...)
 
 	if resp.Diagnostics.HasError() {
 		return

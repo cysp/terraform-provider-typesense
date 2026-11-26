@@ -47,7 +47,7 @@ Collection updates default to thirty minutes. Create, read and delete operations
 
 ### Optional
 
-- `default_sorting_field` (String) Default sorting field returned by Typesense when omitted. Explicit changes require collection replacement.
+- `default_sorting_field` (String) Default sorting field returned by Typesense when omitted. A nonempty default sorting field in the plan must appear in the planned fields. Explicit changes require collection replacement.
 - `enable_nested_fields` (Boolean) Whether nested object fields are enabled. Explicit changes require collection replacement.
 - `symbols_to_index` (List of String) Symbols included in the index. Omission uses the API value. Explicit changes require collection replacement.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
