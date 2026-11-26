@@ -116,12 +116,50 @@ func (model *CollectionModel) readCollection(ctx context.Context, response *api.
 	return diags
 }
 
+var errReindexUnstoredField = errors.New("cannot reindex field")
+
+// A child's own store flag can be true even when Typesense discards the
+// entire containing object before writing the document.
+func validateStoredReindexSource(current *api.CollectionResponse, name string) error {
+	for _, field := range current.Fields {
+		if field.Store == nil || *field.Store {
+			continue
+		}
+
+		containingObject := current.EnableNestedFields != nil && *current.EnableNestedFields &&
+			(field.Type == "object" || field.Type == "object[]") && !isCollectionDynamicField(field) && strings.HasPrefix(name, field.Name+".")
+		if field.Name == name || containingObject {
+			return fmt.Errorf("%w %q: field %q has store=false, so Typesense cannot rebuild the index from stored documents. No schema alteration was sent. Create the destination schema through Typesense with store=false before loading documents, populate it from the original data, and switch the alias", errReindexUnstoredField, name, field.Name)
+		}
+	}
+
+	return nil
+}
+
 func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {
 	previous := current.Fields
 
 	removed, err := collectionFieldsToDrop(current, desired)
 	if err != nil {
 		return nil, err
+	}
+
+	// A drop applies to every observed definition with that name, including
+	// fields implicitly dropped with a nested parent.
+	for _, old := range previous {
+		if old.Index != nil && !*old.Index {
+			continue
+		}
+
+		sameName := func(field api.Field) bool { return field.Name == old.Name }
+		if !slices.ContainsFunc(removed, sameName) || !slices.ContainsFunc(desired, sameName) {
+			continue
+		}
+
+		err := validateStoredReindexSource(current, old.Name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var changes []api.Field

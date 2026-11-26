@@ -66,6 +66,12 @@ Terraform still uses `fields` when creating the collection. Afterwards, `ignore_
 
 Terraform's [`ignore_changes`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#ignore_changes) does not select fields by name or regex. Individual list indexes refer to positions, not field identities; using them for a changing schema can ignore the wrong field. Ignoring the entire attribute is the broad opt-out from field management.
 
+## Indexed fields with unstored values
+
+Typesense can keep a field searchable while omitting its value from stored documents. Reindexing can then erase existing search matches. The provider refuses to rebuild a retained indexed field when the field itself or a containing object or object array has `store=false`. For example, a child declared as `person.title` can report `store=true` even though `person` has `store=false` and the stored document lacks the entire object. This check also applies when the collection currently reports zero documents. Unrelated edits and explicit removals remain available.
+
+To preserve the storage policy, create the destination collection through Typesense with the intended `store=false` settings before loading any documents. Populate it from the original data, verify search results and document retrieval, then switch the alias. Import the new collection to manage it with Terraform. This resource cannot configure `store=false` on a newly added field. Removing and re-adding a field through Terraform uses Typesense’s default `store=true`, so reingested values may be stored on disk. Typesense can also reject adding a required field to a populated collection whose stored documents lack its values.
+
 ## Dynamic rule alterations
 
 Removing or changing a dynamic rule can cause Typesense to remove concrete fields that match it, including explicitly configured fields. The provider rejects dropping or reindexing an opaque dynamic rule when the same alteration leaves any existing concrete field untouched, before sending the alteration. The `.*` fallback is exempt from this guard because removing it does not natively remove its concrete fields; the provider still removes any fields absent from configuration.
