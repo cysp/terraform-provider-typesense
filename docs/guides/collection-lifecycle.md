@@ -43,6 +43,8 @@ A named `auto` or `string*` declaration can produce a concrete field with the sa
 
 Field names and regex rules are passed to Typesense as opaque strings. The provider does not evaluate whether a name matches a rule. When reindexing a field, the provider preserves applicable field properties, including the reference deletion policy (`cascade_delete`), asynchronous references (`async_reference`), vector index parameters (`hnsw_params`), and truncation length (`truncate_len`). For a reindex the provider matches the observed field by name and type. During a type change it can reuse a single observed definition with that name. If several definitions match and their types do not identify a unique source, the provider stops before sending the alteration. Property names are case-sensitive. An unrecognized field property also prevents that field from being rebuilt. You can still change unrelated fields or explicitly remove the affected field.
 
+On a type change, the provider retains stemming for string fields and range indexes for numeric fields, including their array types. It omits those settings for incompatible destination types. A change away from `float[]` also removes a credential-free embedding configuration.
+
 ### Letting another system manage fields
 
 If Typesense or another system should manage the field schema after creation, ignore the entire `fields` attribute:
