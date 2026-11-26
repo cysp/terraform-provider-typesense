@@ -136,6 +136,21 @@ func rebuildCollectionField(raw json.RawMessage, want api.Field) (alterationFiel
 		return alterationField{}, fmt.Errorf("cannot safely reindex field %q: %w. No alteration was sent. Use a provider version that supports this field definition or apply the field change through Typesense, then refresh and review a new plan", want.Name, err)
 	}
 
+	if field.Type != want.Type {
+		if !slices.Contains([]string{"string", "string[]"}, want.Type) {
+			field.Stem, field.StemDictionary = nil, nil
+		}
+
+		if !slices.Contains([]string{"int32", "int32[]", "int64", "int64[]", "float", "float[]"}, want.Type) {
+			field.RangeIndex = nil
+		}
+
+		// Keep masked configurations subject to the existing credential guard.
+		if want.Type != "float[]" && !hasEmbeddingCredentials(field.Field) {
+			field.Embed = nil
+		}
+	}
+
 	field.Type, field.Facet, field.Index, field.Infix, field.Locale = want.Type, want.Facet, want.Index, want.Infix, want.Locale
 
 	field.NumDim, field.Optional, field.Reference, field.Sort = want.NumDim, want.Optional, want.Reference, want.Sort
