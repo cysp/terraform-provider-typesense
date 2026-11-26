@@ -30,11 +30,12 @@ func TestAccCollectionUnknownFieldName(t *testing.T) {
 	t.Parallel()
 	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Steps: []resource.TestStep{
 		{Config: providerConfig("http://127.0.0.1:1") + `resource "terraform_data" "field" {
- input="title"
+ input="rank"
  }
  resource "typesense_collection" "test" {
  name="posts"
- fields=[{name=terraform_data.field.output,type="string"}]
+ default_sorting_field="rank"
+ fields=[{name=terraform_data.field.output,type="int64",sort=true}]
  }`, PlanOnly: true, ExpectNonEmptyPlan: true},
 	}})
 }

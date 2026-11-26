@@ -17,6 +17,10 @@ Alterations can block writes while reindexing. When you need a separate cutover,
 
 Typesense 29.1 rejects adding or modifying reference fields on existing collections, including changes to their other settings. Typesense 30.2 supports these alterations. On 29.1, use a new collection or upgrade the server for these changes. API rejection does not cause automatic collection replacement.
 
+## Default sorting field
+
+Typesense clears the collection’s default sorting field when an alteration drops that field, even if the same request adds it back. The provider refuses such a rebuild. To change the field while preserving default ranking, populate a new collection with the desired schema and switch the alias. To remove the field and clear the default ranking, omit `default_sorting_field` and remove the field from `fields`. An explicitly configured default sorting field must appear in `fields`.
+
 ## Field ownership
 
 Typesense masks credentials in the model configuration of remote embedding fields. If an alteration would drop and re-add one of these fields, the provider stops before sending the alteration. Apply the field change through Typesense with the original model configuration and credentials, then refresh and review a new Terraform plan. You can still change unrelated fields or explicitly remove the embedding field.

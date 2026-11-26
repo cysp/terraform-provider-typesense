@@ -139,6 +139,8 @@ func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field
 	return changes, nil
 }
 
+var errReindexDefaultSortingField = errors.New("cannot reindex the default sorting field")
+
 func collectionFieldsToDrop(current *api.CollectionResponse, desired []api.Field) ([]api.Field, error) {
 	previous := current.Fields
 
@@ -174,6 +176,10 @@ func collectionFieldsToDrop(current *api.CollectionResponse, desired []api.Field
 				}
 			}
 		}
+	}
+
+	if sorting := current.DefaultSortingField; sorting != nil && removedNames[*sorting] && slices.ContainsFunc(desired, func(field api.Field) bool { return field.Name == *sorting }) {
+		return nil, fmt.Errorf("%w %q. Typesense clears default_sorting_field when this field is dropped and re-added. No schema alteration was sent. Create and populate a new collection with the desired schema, then switch the alias", errReindexDefaultSortingField, *sorting)
 	}
 
 	return removed, nil
