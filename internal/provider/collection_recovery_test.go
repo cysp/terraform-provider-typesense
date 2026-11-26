@@ -120,26 +120,33 @@ func TestAccCollectionResourceCredentialBackedEmbeddingAlteration(t *testing.T) 
 	}))
 	t.Cleanup(server.Close)
 
-	config := providerConfig(server.URL) + `resource "typesense_collection" "test" {
+	const (
+		title     = `{name = "title", type = "string", facet = false}`
+		embedding = `{name = "embedding", type = "float[]", num_dim = 3, optional = true}`
+		author    = `{name = "author", type = "string", optional = true}`
+	)
+
+	config := func(fields ...string) string {
+		return providerConfig(server.URL) + `resource "typesense_collection" "test" {
   name = "posts"
-  fields = [
-    {name = "title", type = "string", facet = false},
-    {name = "embedding", type = "float[]", num_dim = 3, optional = true},
-  ]
+  fields = [` + strings.Join(fields, ",") + `]
 }`
-	unrelated := strings.Replace(config, "facet = false", "facet = true", 1)
+	}
+	blockedSource := regexp.MustCompile(`embedding field\s+"embedding" depends on "title"`)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			{Config: config + `
+			{Config: config(title, embedding) + `
 import {
   to = typesense_collection.test
   id = "posts"
 }`},
-			{Config: unrelated},
-			{Config: strings.Replace(unrelated, "optional = true", "optional = false", 1), ExpectError: regexp.MustCompile("Cannot reindex embedding field")},
-			{Config: strings.Replace(unrelated, `{name = "embedding", type = "float[]", num_dim = 3, optional = true},`, "", 1)},
+			{Config: config(strings.Replace(title, "false", "true", 1), embedding), ExpectError: blockedSource},
+			{Config: config(embedding), ExpectError: blockedSource},
+			{Config: config(title, strings.Replace(embedding, "true", "false", 1)), ExpectError: regexp.MustCompile("Cannot reindex embedding field")},
+			{Config: config(title, embedding, author), PreConfig: func() { require.Zero(t, patches.Load()) }},
+			{Config: config(author), PreConfig: func() { require.EqualValues(t, 1, patches.Load()) }},
 		},
 	})
-	require.EqualValues(t, 2, patches.Load(), "only the unrelated change and the explicit field removal should send a PATCH")
+	require.EqualValues(t, 2, patches.Load(), "only the unrelated addition and explicit removal should send a PATCH")
 }

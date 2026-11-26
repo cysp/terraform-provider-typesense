@@ -125,7 +125,13 @@ func collectionFieldChanges(current *api.CollectionResponse, desired []api.Field
 	}
 
 	var changes []api.Field
+
 	for _, old := range removed {
+		err := validateEmbeddingSourceDrop(old.Name, previous, desired)
+		if err != nil {
+			return nil, err
+		}
+
 		changes = append(changes, api.Field{Name: old.Name, Drop: new(true)})
 	}
 
@@ -179,7 +185,10 @@ func collectionFieldsToDrop(current *api.CollectionResponse, desired []api.Field
 	return removed, nil
 }
 
-var errCollectionDynamicDrop = errors.New("cannot safely remove or reindex dynamic field")
+var (
+	errCollectionDynamicDrop = errors.New("cannot safely remove or reindex dynamic field")
+	errEmbeddingSourceDrop   = errors.New("cannot safely remove or reindex an embedding source")
+)
 
 func validateCollectionDynamicDrops(previous []api.Field, removedNames map[string]bool) error {
 	// Names are opaque. A dynamic drop may remove any retained concrete field;
@@ -193,6 +202,20 @@ func validateCollectionDynamicDrops(previous []api.Field, removedNames map[strin
 			if !isCollectionDynamicField(retained) && !removedNames[retained.Name] {
 				return fmt.Errorf("%w %q while retaining concrete field %q. No schema alteration was sent. Remove the dynamic rule and existing concrete fields in a separate apply before adding the desired schema, or use a new collection and an alias cutover", errCollectionDynamicDrop, old.Name, retained.Name)
 			}
+		}
+	}
+
+	return nil
+}
+
+func validateEmbeddingSourceDrop(source string, previous, desired []api.Field) error {
+	for _, field := range previous {
+		if field.Embed == nil || !slices.Contains(field.Embed.From, source) {
+			continue
+		}
+
+		if slices.ContainsFunc(desired, func(want api.Field) bool { return want.Name == field.Name && want.Type == field.Type }) {
+			return fmt.Errorf("%w: embedding field %q depends on %q. Dropping this source can change or delete the embedding, even if the source is re-added. No schema alteration was sent. To retain the embedding, populate a new collection with the desired source fields and original embedding configuration, then switch the alias", errEmbeddingSourceDrop, field.Name, source)
 		}
 	}
 
